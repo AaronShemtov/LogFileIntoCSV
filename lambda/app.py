@@ -11,7 +11,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # Constants
-GITHUB_TOKEN = os.getenv("token")  # GitHub Token
+GITHUB_TOKEN = os.getenv("GITHUB_TOKEN")  # GitHub Token
 REPO_NAME = "AaronShemtov/LogFileIntoCSV"  # Repository name
 LOG_FILE_NAME = "nginx.log"  # Log file name in the repo
 CSV_OUTPUT_PREFIX = "output"  # Prefix for the output file
