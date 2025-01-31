@@ -3,7 +3,7 @@ name: Build and Deploy Lambda Docker Image
 on:
   push:
     branches:
-      - master  # Запускать на пуш в мастер-ветку
+      - main  # Запускать на пуш в мастер-ветку
 
 jobs:
   build:
