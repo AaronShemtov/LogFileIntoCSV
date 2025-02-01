@@ -4,6 +4,7 @@ import json
 import logging
 import requests
 import boto3
+import os
 from datetime import datetime
 
 # Set up logging for debugging
@@ -17,6 +18,11 @@ DEFAULT_LOG_FILE = "nginx.log"  # Default log file name
 # S3 Configuration
 S3_BUCKET_NAME = "logs-result-csv"
 S3_OUTPUT_FOLDER = "logs-output/"
+
+# GitHub Configuration
+GITHUB_API_URL = "https://api.github.com"
+GITHUB_TOKEN = os.environ.get("GITHUB_TOKEN")  # GitHub token from environment variables
+GITHUB_OWNER = "AaronShemtov"  # GitHub owner (you can also fetch this from the repo URL)
 
 # Initialize S3 Client
 s3 = boto3.client("s3")
@@ -92,6 +98,46 @@ def upload_to_s3(parsed_data, log_file_name):
         logging.error(f"Error uploading file to S3: {str(e)}")
         return {"error": f"Failed to upload file: {str(e)}"}
 
+def upload_to_github(parsed_data, log_file_name):
+    """Uploads parsed log data to GitHub repository."""
+    timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+    csv_filename = f"output_{timestamp}.csv"
+    content = "ip,date,method,url,protocol,status,size\n"
+    for row in parsed_data:
+        content += f"{row['ip']},{row['date']},{row['method']},{row['url']},{row['protocol']},{row['status']},{row['size']}\n"
+
+    # Prepare GitHub API URL for the specific file
+    file_path = f"logs_output/{csv_filename}"
+    api_url = f"{GITHUB_API_URL}/repos/{GITHUB_OWNER}/{GITHUB_REPO}/contents/{file_path}"
+
+    # Prepare the payload for creating or updating the file
+    payload = {
+        "message": f"Add new log CSV file {csv_filename}",
+        "content": content.encode("utf-8").decode("ascii"),  # Base64 encoded file content
+    }
+
+    headers = {
+        "Authorization": f"token {GITHUB_TOKEN}",
+    }
+
+    try:
+        # Check if the file exists by attempting a GET request
+        response = requests.get(api_url, headers=headers)
+        if response.status_code == 200:
+            # File exists, update it
+            existing_file = response.json()
+            payload["sha"] = existing_file["sha"]  # Add SHA for update
+
+        # Upload or update the file to GitHub
+        response = requests.put(api_url, headers=headers, json=payload)
+        response.raise_for_status()  # Will raise an exception for HTTP errors
+        logging.info(f"File uploaded successfully to GitHub: {file_path}")
+        return {"message": "File uploaded successfully to GitHub", "url": f"https://github.com/{GITHUB_OWNER}/{GITHUB_REPO}/blob/main/{file_path}"}
+    
+    except Exception as e:
+        logging.error(f"Error uploading file to GitHub: {str(e)}")
+        return {"error": f"Failed to upload file to GitHub: {str(e)}"}
+
 def lambda_handler(event, context):
     """AWS Lambda handler function."""
     logging.info("Lambda function started.")
@@ -104,6 +150,9 @@ def lambda_handler(event, context):
     
     # Get filter parameter (default to None if not provided)
     filter_param = event.get("queryStringParameters", {}).get("filter", None)
+    
+    # Get upload parameter (default to "s3" if not provided)
+    upload_to = event.get("queryStringParameters", {}).get("upload", "s3")
     
     filter_key = None
     filter_value = None
@@ -123,7 +172,12 @@ def lambda_handler(event, context):
         if filter_key and filter_value:
             parsed_data = filter_logs(parsed_data, filter_key, filter_value)
 
-        result = upload_to_s3(parsed_data, log_file_name)  # Upload to S3
+        # Upload to the specified destination
+        if upload_to == "github":
+            result = upload_to_github(parsed_data, log_file_name)
+        else:
+            result = upload_to_s3(parsed_data, log_file_name)
+
         logging.info("Lambda function completed successfully.")
         return {
             "statusCode": 200,
