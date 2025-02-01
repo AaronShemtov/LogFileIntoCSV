@@ -99,7 +99,7 @@ def upload_to_github(parsed_data, log_file_name):
     }
 
     data = {
-        "message": f"Add log file {csv_filename}",
+        "message": f"Add log file {csv_filename}. File uploaded by Lambda",
         "content": base64.b64encode(csv_content.encode()).decode("utf-8"),
         "branch": "main"  # Specify your branch
     }
