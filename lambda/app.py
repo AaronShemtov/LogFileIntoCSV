@@ -7,7 +7,16 @@ from datetime import datetime
 from github import Github
 
 # Constants in app d
-GITHUB_TOKEN = os.environ["G_TOKEN"]  # GitHub Token from GitHub Secrets
+
+# Get the token from the environment variable
+GITHUB_TOKEN = os.getenv("G_TOKEN")
+
+# Check if the environment variable is found
+if GITHUB_TOKEN is None:
+    print("Error: 'G_TOKEN' environment variable is not set!")
+else:
+    print(f"GitHub Token: {GITHUB_TOKEN}")
+
 REPO_NAME = "AaronShemtov/LogFileIntoCSV"  # Repository name
 LOG_FILE_NAME = "nginx.log"  # Log file name in the repo
 CSV_OUTPUT_PREFIX = "output"  # Prefix for the output file
