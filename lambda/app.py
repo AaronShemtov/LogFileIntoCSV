@@ -65,4 +65,79 @@ def upload_to_s3(parsed_data, log_file_name):
     # Convert parsed data to CSV format
     csv_content = "ip,date,method,url,protocol,status,size\n"
     for row in parsed_data:
-  
+        csv_content += f"{row['ip']},{row['date']},{row['method']},{row['url']},{row['protocol']},{row['status']},{row['size']}\n"
+
+    try:
+        # Upload to S3
+        s3.put_object(Bucket=S3_BUCKET_NAME, Key=s3_key, Body=csv_content, ContentType="text/csv")
+        
+        # Generate Public URL
+        file_url = f"https://{S3_BUCKET_NAME}.s3.amazonaws.com/{s3_key}"
+
+        logging.info(f"File uploaded successfully to S3: {file_url}")
+        return {"message": "File uploaded successfully", "url": file_url}
+
+    except Exception as e:
+        logging.error(f"Error uploading file to S3: {str(e)}")
+        return {"error": f"Failed to upload file: {str(e)}"}
+
+def upload_to_github(parsed_data, log_file_name):
+    """Uploads parsed log data to GitHub repository."""
+    timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+    csv_filename = f"output_{timestamp}.csv"
+    file_path = f"logs_output/{csv_filename}"
+
+    # Convert parsed data to CSV format
+    csv_content = "ip,date,method,url,protocol,status,size\n"
+    for row in parsed_data:
+        csv_content += f"{row['ip']},{row['date']},{row['method']},{row['url']},{row['protocol']},{row['status']},{row['size']}\n"
+
+    github_url = f"https://api.github.com/repos/AaronShemtov/LogFileIntoCSV/contents/{file_path}"
+    headers = {
+        "Authorization": f"token {GITHUB_TOKEN}",
+        "Content-Type": "application/json"
+    }
+
+    data = {
+        "message": f"Add log file {csv_filename}",
+        "content": base64.b64encode(csv_content.encode()).decode("utf-8"),
+        "branch": "main"  # Specify your branch
+    }
+
+    try:
+        response = requests.put(github_url, headers=headers, json=data)
+        response.raise_for_status()
+        logging.info(f"File uploaded successfully to GitHub: {github_url}")
+        return {"message": "File uploaded successfully", "url": github_url}
+    except requests.exceptions.RequestException as e:
+        logging.error(f"Failed to upload file to GitHub: {str(e)}")
+        return {"error": f"Failed to upload file: {str(e)}"}
+
+def lambda_handler(event, context):
+    """AWS Lambda handler function."""
+    logging.info("Lambda function started.")
+    
+    # Get log file name from query parameters (default to DEFAULT_LOG_FILE if not provided)
+    log_file_name = event.get("queryStringParameters", {}).get("log_file", DEFAULT_LOG_FILE)
+    upload_option = event.get("queryStringParameters", {}).get("upload", "s3")
+    
+    try:
+        log_data = fetch_logs(log_file_name)
+        parsed_data = parse_logs(log_data)
+        
+        if upload_option == "github":
+            result = upload_to_github(parsed_data, log_file_name)  # Upload to GitHub
+        else:
+            result = upload_to_s3(parsed_data, log_file_name)  # Default to uploading to S3
+        
+        logging.info("Lambda function completed successfully.")
+        return {
+            "statusCode": 200,
+            "body": json.dumps(result)
+        }
+    except Exception as e:
+        logging.error(f"Lambda function error: {str(e)}")
+        return {
+            "statusCode": 500,
+            "body": json.dumps({"error": str(e)}),
+        }
