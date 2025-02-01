@@ -3,8 +3,8 @@ import csv
 import json
 import logging
 import requests
-from datetime import datetime
 import boto3
+from datetime import datetime
 
 # Set up logging for debugging
 logging.basicConfig(level=logging.DEBUG)
@@ -13,7 +13,6 @@ logging.basicConfig(level=logging.DEBUG)
 GITHUB_REPO = "AaronShemtov/LogFileIntoCSV"  # GitHub Repository
 RAW_GITHUB_URL = f"https://raw.githubusercontent.com/{GITHUB_REPO}/main/input_logs/"
 DEFAULT_LOG_FILE = "nginx.log"  # Default log file name
-CSV_OUTPUT_PREFIX = "output"  # Prefix for the output file
 
 # S3 Configuration
 S3_BUCKET_NAME = "logs-result-csv"
@@ -52,10 +51,10 @@ def parse_logs(log_data):
     logging.debug(f"Parsed {len(parsed_data)} lines of log data.")
     return parsed_data
 
-def upload_to_s3(parsed_data):
+def upload_to_s3(parsed_data, log_file_name):
     """Uploads parsed log data to an S3 bucket."""
     timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-    csv_filename = f"{CSV_OUTPUT_PREFIX}_{timestamp}.csv"
+    csv_filename = f"{log_file_name}_{timestamp}.csv"
     s3_key = f"{S3_OUTPUT_FOLDER}{csv_filename}"  # Full S3 path
 
     # Convert parsed data to CSV format
@@ -87,7 +86,7 @@ def lambda_handler(event, context):
     try:
         log_data = fetch_logs(log_file_name)
         parsed_data = parse_logs(log_data)
-        result = upload_to_s3(parsed_data)  # Upload to S3
+        result = upload_to_s3(parsed_data, log_file_name)  # Upload to S3
         logging.info("Lambda function completed successfully.")
         return {
             "statusCode": 200,
