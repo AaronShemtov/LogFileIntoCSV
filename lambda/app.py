@@ -1,8 +1,8 @@
 import re
 import csv
-import os
 import json
 import logging
+import requests
 from datetime import datetime
 import boto3
 
@@ -10,8 +10,9 @@ import boto3
 logging.basicConfig(level=logging.DEBUG)
 
 # Constants
+GITHUB_REPO = "AaronShemtov/LogFileIntoCSV"  # GitHub Repository
+RAW_GITHUB_URL = f"https://raw.githubusercontent.com/{GITHUB_REPO}/main/input_logs/"
 DEFAULT_LOG_FILE = "nginx.log"  # Default log file name
-INPUT_LOGS_FOLDER = "input_logs/"  # Folder where logs are stored in GitHub root directory
 CSV_OUTPUT_PREFIX = "output"  # Prefix for the output file
 
 # S3 Configuration
@@ -27,19 +28,18 @@ LOG_PATTERN = re.compile(
 )
 
 def fetch_logs(log_file_name):
-    """Fetch log file from local storage."""
-    log_file_path = os.path.join(INPUT_LOGS_FOLDER, log_file_name)
-    logging.debug(f"Fetching log file from path: {log_file_path}")
+    """Fetch log file from GitHub repository."""
+    log_file_url = f"{RAW_GITHUB_URL}{log_file_name}"
+    logging.debug(f"Fetching log file from URL: {log_file_url}")
     
-    if not os.path.exists(log_file_path):
-        logging.error(f"Log file {log_file_name} not found.")
-        raise FileNotFoundError(f"Log file {log_file_name} not found.")
-    
-    with open(log_file_path, "r") as file:
-        log_data = file.read()
-    
-    logging.debug("Log file read successfully.")
-    return log_data
+    try:
+        response = requests.get(log_file_url)
+        response.raise_for_status()
+        logging.debug("Log file fetched successfully from GitHub.")
+        return response.text
+    except requests.exceptions.RequestException as e:
+        logging.error(f"Error fetching log file: {str(e)}")
+        raise FileNotFoundError(f"Log file {log_file_name} not found in GitHub repository.")
 
 def parse_logs(log_data):
     """Parse logs using regex pattern."""
