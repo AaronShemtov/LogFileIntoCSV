@@ -56,7 +56,8 @@ jobs:
           aws-region: ${{ secrets.AWS_REGION }}  # Ensure this secret is defined
 
       - name: Debug Lambda Function Name
-        run: echo "Lambda Function Name: ${{ secrets.LAMBDA_FUNCTION_NAME }}"  # Debugging the function name
+        run: |
+          echo "Lambda Function Name: ${{ secrets.LAMBDA_FUNCTION_NAME }}"  # Debugging the function name
 
       - name: Deploy Docker image to AWS Lambda
         run: |
