@@ -32,7 +32,7 @@ jobs:
 
       - name: Build Docker image
         run: |
-          docker buildx build --platform linux/amd64 -t ${{ secrets.ECR_REPOSITORY }} .
+          docker buildx build --platform linux/amd64 --load -t ${{ secrets.ECR_REPOSITORY }} .
 
       - name: Push Docker image to Amazon ECR
         run: |
