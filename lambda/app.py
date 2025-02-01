@@ -80,8 +80,8 @@ def lambda_handler(event, context):
     """AWS Lambda handler function."""
     logging.info("Lambda function started.")
     
-    # Get log file name from event, default to DEFAULT_LOG_FILE
-    log_file_name = event.get("log_file", DEFAULT_LOG_FILE)
+    # Get log file name from query parameters (default to DEFAULT_LOG_FILE if not provided)
+    log_file_name = event.get("queryStringParameters", {}).get("log_file", DEFAULT_LOG_FILE)
     
     try:
         log_data = fetch_logs(log_file_name)
@@ -96,5 +96,5 @@ def lambda_handler(event, context):
         logging.error(f"Lambda function error: {str(e)}")
         return {
             "statusCode": 500,
-            "body": json.dumps({"error": str(e)})
+            "body": json.dumps({"error": str(e)}),
         }
