@@ -6,12 +6,8 @@ import json
 from datetime import datetime
 from github import Github
 
-# Ensure the GitHub Token is set correctly
-if "GITHUB_TOKEN" not in os.environ:
-    raise ValueError("GITHUB_TOKEN is not set in environment variables.")
-
 # Constants in app d
-GITHUB_TOKEN = os.environ["GITHUB_TOKEN"]  # GitHub Token
+GITHUB_TOKEN = os.environ["G_TOKEN"]  # GitHub Token from GitHub Secrets
 REPO_NAME = "AaronShemtov/LogFileIntoCSV"  # Repository name
 LOG_FILE_NAME = "nginx.log"  # Log file name in the repo
 CSV_OUTPUT_PREFIX = "output"  # Prefix for the output file
