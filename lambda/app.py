@@ -4,8 +4,9 @@ import json
 import logging
 import requests
 import boto3
-import os
+import base64
 from datetime import datetime
+import os
 
 # Set up logging for debugging
 logging.basicConfig(level=logging.DEBUG)
@@ -19,13 +20,11 @@ DEFAULT_LOG_FILE = "nginx.log"  # Default log file name
 S3_BUCKET_NAME = "logs-result-csv"
 S3_OUTPUT_FOLDER = "logs-output/"
 
-# GitHub Configuration
-GITHUB_API_URL = "https://api.github.com"
-GITHUB_TOKEN = os.environ.get("GITHUB_TOKEN")  # GitHub token from environment variables
-GITHUB_OWNER = "AaronShemtov"  # GitHub owner (you can also fetch this from the repo URL)
-
 # Initialize S3 Client
 s3 = boto3.client("s3")
+
+# Get GitHub token from environment variables
+GITHUB_TOKEN = os.environ.get("GITHUB_TOKEN")
 
 # Regex pattern for parsing Nginx logs
 LOG_PATTERN = re.compile(
@@ -57,22 +56,6 @@ def parse_logs(log_data):
     logging.debug(f"Parsed {len(parsed_data)} lines of log data.")
     return parsed_data
 
-def sort_logs(parsed_data, sort_by):
-    """Sort parsed data based on the sort parameter."""
-    try:
-        sorted_data = sorted(parsed_data, key=lambda x: x.get(sort_by, ''), reverse=False)
-        logging.debug(f"Logs sorted by {sort_by}")
-        return sorted_data
-    except KeyError:
-        logging.error(f"Invalid sort key: {sort_by}")
-        return parsed_data
-
-def filter_logs(parsed_data, filter_key, filter_value):
-    """Filter parsed data based on the filter parameter."""
-    filtered_data = [entry for entry in parsed_data if entry.get(filter_key) == filter_value]
-    logging.debug(f"Filtered logs by {filter_key} = {filter_value}. Filtered count: {len(filtered_data)}")
-    return filtered_data
-
 def upload_to_s3(parsed_data, log_file_name):
     """Uploads parsed log data to an S3 bucket."""
     timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
@@ -82,110 +65,4 @@ def upload_to_s3(parsed_data, log_file_name):
     # Convert parsed data to CSV format
     csv_content = "ip,date,method,url,protocol,status,size\n"
     for row in parsed_data:
-        csv_content += f"{row['ip']},{row['date']},{row['method']},{row['url']},{row['protocol']},{row['status']},{row['size']}\n"
-
-    try:
-        # Upload to S3
-        s3.put_object(Bucket=S3_BUCKET_NAME, Key=s3_key, Body=csv_content, ContentType="text/csv")
-        
-        # Generate Public URL
-        file_url = f"https://{S3_BUCKET_NAME}.s3.amazonaws.com/{s3_key}"
-
-        logging.info(f"File uploaded successfully to S3: {file_url}")
-        return {"message": "File uploaded successfully", "url": file_url}
-
-    except Exception as e:
-        logging.error(f"Error uploading file to S3: {str(e)}")
-        return {"error": f"Failed to upload file: {str(e)}"}
-
-def upload_to_github(parsed_data, log_file_name):
-    """Uploads parsed log data to GitHub repository."""
-    timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-    csv_filename = f"output_{timestamp}.csv"
-    content = "ip,date,method,url,protocol,status,size\n"
-    for row in parsed_data:
-        content += f"{row['ip']},{row['date']},{row['method']},{row['url']},{row['protocol']},{row['status']},{row['size']}\n"
-
-    # Prepare GitHub API URL for the specific file
-    file_path = f"logs_output/{csv_filename}"
-    api_url = f"{GITHUB_API_URL}/repos/{GITHUB_OWNER}/{GITHUB_REPO}/contents/{file_path}"
-
-    # Prepare the payload for creating or updating the file
-    payload = {
-        "message": f"Add new log CSV file {csv_filename}",
-        "content": content.encode("utf-8").decode("ascii"),  # Base64 encoded file content
-    }
-
-    headers = {
-        "Authorization": f"token {GITHUB_TOKEN}",
-    }
-
-    try:
-        # Check if the file exists by attempting a GET request
-        response = requests.get(api_url, headers=headers)
-        if response.status_code == 200:
-            # File exists, update it
-            existing_file = response.json()
-            payload["sha"] = existing_file["sha"]  # Add SHA for update
-
-        # Upload or update the file to GitHub
-        response = requests.put(api_url, headers=headers, json=payload)
-        response.raise_for_status()  # Will raise an exception for HTTP errors
-        logging.info(f"File uploaded successfully to GitHub: {file_path}")
-        return {"message": "File uploaded successfully to GitHub", "url": f"https://github.com/{GITHUB_OWNER}/{GITHUB_REPO}/blob/main/{file_path}"}
-    
-    except Exception as e:
-        logging.error(f"Error uploading file to GitHub: {str(e)}")
-        return {"error": f"Failed to upload file to GitHub: {str(e)}"}
-
-def lambda_handler(event, context):
-    """AWS Lambda handler function."""
-    logging.info("Lambda function started.")
-    
-    # Get log file name from query parameters (default to DEFAULT_LOG_FILE if not provided)
-    log_file_name = event.get("queryStringParameters", {}).get("log_file", DEFAULT_LOG_FILE)
-    
-    # Get sort parameter (default to None if not provided)
-    sort_by = event.get("queryStringParameters", {}).get("sort", None)
-    
-    # Get filter parameter (default to None if not provided)
-    filter_param = event.get("queryStringParameters", {}).get("filter", None)
-    
-    # Get upload parameter (default to "s3" if not provided)
-    upload_to = event.get("queryStringParameters", {}).get("upload", "s3")
-    
-    filter_key = None
-    filter_value = None
-    if filter_param:
-        # Filter is in the form key=value, split it
-        filter_key, filter_value = filter_param.split("=")
-    
-    try:
-        log_data = fetch_logs(log_file_name)
-        parsed_data = parse_logs(log_data)
-
-        # Apply sorting if requested
-        if sort_by:
-            parsed_data = sort_logs(parsed_data, sort_by)
-
-        # Apply filtering if requested
-        if filter_key and filter_value:
-            parsed_data = filter_logs(parsed_data, filter_key, filter_value)
-
-        # Upload to the specified destination
-        if upload_to == "github":
-            result = upload_to_github(parsed_data, log_file_name)
-        else:
-            result = upload_to_s3(parsed_data, log_file_name)
-
-        logging.info("Lambda function completed successfully.")
-        return {
-            "statusCode": 200,
-            "body": json.dumps(result)
-        }
-    except Exception as e:
-        logging.error(f"Lambda function error: {str(e)}")
-        return {
-            "statusCode": 500,
-            "body": json.dumps({"error": str(e)}),
-        }
+  
