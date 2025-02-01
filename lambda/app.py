@@ -64,7 +64,7 @@ def push_to_github(parsed_data):
 
         # Convert parsed data to CSV format (in-memory)
         timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-        csv_filename = f"{CSV_OUTPUT_PREFIX}_{timestamp}.csv"
+        csv_filename = f"{CSV_OUTPUT_PREFIX}_{timestamp}.csv"  # Ensure csv_filename is set here
         
         csv_content = "ip,date,method,url,protocol,status,size\n"
         for row in parsed_data:
@@ -78,7 +78,7 @@ def push_to_github(parsed_data):
 
     except Exception as e:
         logging.error(f"Error uploading file to GitHub: {str(e)}")
-        return {"error": f"Failed to upload {csv_filename}: {str(e)}"}
+        return {"error": f"Failed to upload file: {str(e)}"}
 
 def lambda_handler(event, context):
     """AWS Lambda handler function."""
