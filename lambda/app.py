@@ -10,7 +10,7 @@ import boto3
 # Set up logging for debugging
 logging.basicConfig(level=logging.DEBUG)
 
-# Constants
+# Constants p
 REPO_NAME = "AaronShemtov/LogFileIntoCSV"  # GitHub Repository
 LOG_FILE_NAME = "nginx.log"  # Log file in the repo
 CSV_OUTPUT_PREFIX = "output"  # Prefix for the output file
