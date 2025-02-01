@@ -6,9 +6,6 @@ import json
 from datetime import datetime
 from github import Github
 
-# Load environment variables
-load_dotenv()
-
 # Constants in app d
 GITHUB_TOKEN = os.environ.get("GITHUB_TOKEN")  # GitHub Token
 REPO_NAME = "AaronShemtov/LogFileIntoCSV"  # Repository name
