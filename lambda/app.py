@@ -5,13 +5,12 @@ import os
 import json
 from datetime import datetime
 from github import Github
-from dotenv import load_dotenv
 
 # Load environment variables
 load_dotenv()
 
 # Constants in app d
-GITHUB_TOKEN = os.getenv("GITHUB_TOKEN")  # GitHub Token
+GITHUB_TOKEN = os.environ.get("GITHUB_TOKEN")  # GitHub Token
 REPO_NAME = "AaronShemtov/LogFileIntoCSV"  # Repository name
 LOG_FILE_NAME = "nginx.log"  # Log file name in the repo
 CSV_OUTPUT_PREFIX = "output"  # Prefix for the output file
