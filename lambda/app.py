@@ -1,6 +1,5 @@
 import re
 import csv
-import requests
 import os
 import json
 import logging
@@ -10,9 +9,9 @@ import boto3
 # Set up logging for debugging
 logging.basicConfig(level=logging.DEBUG)
 
-# Constants p d d
-REPO_NAME = "AaronShemtov/LogFileIntoCSV"  # GitHub Repository
-LOG_FILE_NAME = "nginx.log"  # Log file in the repo
+# Constants
+DEFAULT_LOG_FILE = "nginx.log"  # Default log file name
+INPUT_LOGS_FOLDER = "input_logs/"  # Folder where logs are stored in GitHub root directory
 CSV_OUTPUT_PREFIX = "output"  # Prefix for the output file
 
 # S3 Configuration
@@ -22,26 +21,25 @@ S3_OUTPUT_FOLDER = "logs-output/"
 # Initialize S3 Client
 s3 = boto3.client("s3")
 
-# GitHub Raw Log URL
-LOG_FILE_URL = f"https://raw.githubusercontent.com/{REPO_NAME}/main/{LOG_FILE_NAME}"
-
 # Regex pattern for parsing Nginx logs
 LOG_PATTERN = re.compile(
     r'(?P<ip>[\d\.]+) - - \[(?P<date>.*?)\] "(?P<method>\w+) (?P<url>.*?) (?P<protocol>HTTP/\d\.\d)" (?P<status>\d+) (?P<size>\d+)'
 )
 
-def fetch_logs():
-    """Fetch log file from GitHub repository."""
-    logging.debug(f"Fetching log file from URL: {LOG_FILE_URL}")
+def fetch_logs(log_file_name):
+    """Fetch log file from local storage."""
+    log_file_path = os.path.join(INPUT_LOGS_FOLDER, log_file_name)
+    logging.debug(f"Fetching log file from path: {log_file_path}")
     
-    try:
-        response = requests.get(LOG_FILE_URL)
-        response.raise_for_status()
-        logging.debug("Log file fetched successfully.")
-        return response.text
-    except requests.exceptions.RequestException as e:
-        logging.error(f"Error fetching log file: {str(e)}")
-        raise
+    if not os.path.exists(log_file_path):
+        logging.error(f"Log file {log_file_name} not found.")
+        raise FileNotFoundError(f"Log file {log_file_name} not found.")
+    
+    with open(log_file_path, "r") as file:
+        log_data = file.read()
+    
+    logging.debug("Log file read successfully.")
+    return log_data
 
 def parse_logs(log_data):
     """Parse logs using regex pattern."""
@@ -82,9 +80,12 @@ def upload_to_s3(parsed_data):
 def lambda_handler(event, context):
     """AWS Lambda handler function."""
     logging.info("Lambda function started.")
-
+    
+    # Get log file name from event, default to DEFAULT_LOG_FILE
+    log_file_name = event.get("log_file", DEFAULT_LOG_FILE)
+    
     try:
-        log_data = fetch_logs()
+        log_data = fetch_logs(log_file_name)
         parsed_data = parse_logs(log_data)
         result = upload_to_s3(parsed_data)  # Upload to S3
         logging.info("Lambda function completed successfully.")
