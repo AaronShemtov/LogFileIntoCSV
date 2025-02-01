@@ -32,10 +32,8 @@ jobs:
 
       - name: Build Docker image
         run: |
+          cd lambda  # Navigate to the lambda directory where the Dockerfile is located
           docker buildx build --platform linux/amd64 --load -t ${{ secrets.ECR_REPOSITORY }} .
-
-      - name: List Docker images (debugging)
-        run: docker images  # Debug step to check the available images
 
       - name: Push Docker image to Amazon ECR
         run: |
