@@ -51,6 +51,22 @@ def parse_logs(log_data):
     logging.debug(f"Parsed {len(parsed_data)} lines of log data.")
     return parsed_data
 
+def sort_logs(parsed_data, sort_by):
+    """Sort parsed data based on the sort parameter."""
+    try:
+        sorted_data = sorted(parsed_data, key=lambda x: x.get(sort_by, ''), reverse=False)
+        logging.debug(f"Logs sorted by {sort_by}")
+        return sorted_data
+    except KeyError:
+        logging.error(f"Invalid sort key: {sort_by}")
+        return parsed_data
+
+def filter_logs(parsed_data, filter_key, filter_value):
+    """Filter parsed data based on the filter parameter."""
+    filtered_data = [entry for entry in parsed_data if entry.get(filter_key) == filter_value]
+    logging.debug(f"Filtered logs by {filter_key} = {filter_value}. Filtered count: {len(filtered_data)}")
+    return filtered_data
+
 def upload_to_s3(parsed_data, log_file_name):
     """Uploads parsed log data to an S3 bucket."""
     timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
@@ -83,9 +99,30 @@ def lambda_handler(event, context):
     # Get log file name from query parameters (default to DEFAULT_LOG_FILE if not provided)
     log_file_name = event.get("queryStringParameters", {}).get("log_file", DEFAULT_LOG_FILE)
     
+    # Get sort parameter (default to None if not provided)
+    sort_by = event.get("queryStringParameters", {}).get("sort", None)
+    
+    # Get filter parameter (default to None if not provided)
+    filter_param = event.get("queryStringParameters", {}).get("filter", None)
+    
+    filter_key = None
+    filter_value = None
+    if filter_param:
+        # Filter is in the form key=value, split it
+        filter_key, filter_value = filter_param.split("=")
+    
     try:
         log_data = fetch_logs(log_file_name)
         parsed_data = parse_logs(log_data)
+
+        # Apply sorting if requested
+        if sort_by:
+            parsed_data = sort_logs(parsed_data, sort_by)
+
+        # Apply filtering if requested
+        if filter_key and filter_value:
+            parsed_data = filter_logs(parsed_data, filter_key, filter_value)
+
         result = upload_to_s3(parsed_data, log_file_name)  # Upload to S3
         logging.info("Lambda function completed successfully.")
         return {
