@@ -4,7 +4,7 @@ on:
   push:
     branches:
       - main  # Trigger the workflow on push to the main branch
-      paths-ignore:
+    paths-ignore:
       - input_logs/**
       - logs_output/**
 
