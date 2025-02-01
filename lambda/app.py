@@ -54,7 +54,7 @@ def parse_logs(log_data):
 def upload_to_s3(parsed_data, log_file_name):
     """Uploads parsed log data to an S3 bucket."""
     timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-    csv_filename = f"{log_file_name}_{timestamp}.csv"
+    csv_filename = f"output_{timestamp}.csv"
     s3_key = f"{S3_OUTPUT_FOLDER}{csv_filename}"  # Full S3 path
 
     # Convert parsed data to CSV format
