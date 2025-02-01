@@ -10,7 +10,7 @@ from dotenv import load_dotenv
 # Load environment variables
 load_dotenv()
 
-# Constants in app
+# Constants in app d
 GITHUB_TOKEN = os.getenv("GITHUB_TOKEN")  # GitHub Token
 REPO_NAME = "AaronShemtov/LogFileIntoCSV"  # Repository name
 LOG_FILE_NAME = "nginx.log"  # Log file name in the repo
