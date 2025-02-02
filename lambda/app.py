@@ -8,8 +8,11 @@ import base64
 from datetime import datetime
 import os
 
-# Set up logging for debugging
-logging.basicConfig(level=logging.DEBUG)
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,  # Или DEBUG для более подробных логов
+    format='%(asctime)s - %(levelname)s - %(message)s'
+)
 
 # Constants
 GITHUB_REPO = "AaronShemtov/LogFileIntoCSV"  # GitHub Repository
@@ -71,7 +74,7 @@ def upload_to_s3(parsed_data, log_file_name):
         # Upload to S3
         s3.put_object(Bucket=S3_BUCKET_NAME, Key=s3_key, Body=csv_content, ContentType="text/csv")
         
-        # Generate Public URL
+        # Generate URL
         file_url = f"https://{S3_BUCKET_NAME}.s3.amazonaws.com/{s3_key}"
 
         logging.info(f"File uploaded successfully to S3: {file_url}")
