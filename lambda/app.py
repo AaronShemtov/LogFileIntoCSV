@@ -13,7 +13,7 @@ logging.basicConfig(level=logging.DEBUG)
 
 # Constants
 GITHUB_REPO = "AaronShemtov/LogFileIntoCSV"  # GitHub Repository
-RAW_GITHUB_URL = f"https://raw.githubusercontent.com/{GITHUB_REPO}/main/input_logs/"
+RAW_GITHUB_URL = f"https://raw.githubusercontent.com/{GITHUB_REPO}/main/logs_input/"
 DEFAULT_LOG_FILE = "nginx.log"  # Default log file name
 
 # S3 Configuration
