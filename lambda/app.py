@@ -53,6 +53,19 @@ def parse_logs(log_data):
     print(f"Parsed {len(parsed_data)} lines of log data.")
     return parsed_data
 
+def sort_data(parsed_data, sort_field, sort_order="asc"):
+    """Sort data based on the provided field and order."""
+    try:
+        reverse = True if sort_order == "desc" else False
+        return sorted(parsed_data, key=lambda x: x.get(sort_field, ""), reverse=reverse)
+    except Exception as e:
+        print(f"Error sorting data by {sort_field}: {str(e)}")
+        return parsed_data
+
+def filter_data(parsed_data, filter_field, filter_value):
+    """Filter data based on the provided field and value."""
+    return [row for row in parsed_data if row.get(filter_field) == filter_value]
+
 def upload_to_s3(parsed_data, log_file_name):
     """Uploads parsed log data to an S3 bucket."""
     timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
@@ -62,8 +75,7 @@ def upload_to_s3(parsed_data, log_file_name):
     # Convert parsed data to CSV format
     csv_content = "ip,datetime,method,request,protocol,status,response_size,referrer,user_agent,request_duration,request_processing,service,extra_info,upstream_ip,upstream_response_size,upstream_response_duration,final_response_code,request_id\n"
     for row in parsed_data:
-        # Wrap fields with commas in double quotes (e.g., user_agent)
-        csv_content += f"{row['ip']},{row['datetime']},{row['method']},{row['request']},{row['protocol']},{row['status']},{row['response_size']},{row['referrer']},\"{row['user_agent']}\",{row['request_duration']},{row['request_processing']},{row['service']},{row['extra_info']},{row['upstream_ip']},{row['upstream_response_size']},{row['upstream_response_duration']},{row['final_response_code']},{row['request_id']}\n"
+        csv_content += f"{row['ip']},{row['datetime']},{row['method']},{row['request']},{row['protocol']},{row['status']},{row['response_size']},{row['referrer']},{row['user_agent']},{row['request_duration']},{row['request_processing']},{row['service']},{row['extra_info']},{row['upstream_ip']},{row['upstream_response_size']},{row['upstream_response_duration']},{row['final_response_code']},{row['request_id']}\n"
 
     try:
         # Upload to S3
@@ -84,8 +96,7 @@ def upload_to_github(parsed_data, log_file_name):
     # Convert parsed data to CSV format
     csv_content = "ip,datetime,method,request,protocol,status,response_size,referrer,user_agent,request_duration,request_processing,service,extra_info,upstream_ip,upstream_response_size,upstream_response_duration,final_response_code,request_id\n"
     for row in parsed_data:
-        # Wrap fields with commas in double quotes (e.g., user_agent)
-        csv_content += f"{row['ip']},{row['datetime']},{row['method']},{row['request']},{row['protocol']},{row['status']},{row['response_size']},{row['referrer']},\"{row['user_agent']}\",{row['request_duration']},{row['request_processing']},{row['service']},{row['extra_info']},{row['upstream_ip']},{row['upstream_response_size']},{row['upstream_response_duration']},{row['final_response_code']},{row['request_id']}\n"
+        csv_content += f"{row['ip']},{row['datetime']},{row['method']},{row['request']},{row['protocol']},{row['status']},{row['response_size']},{row['referrer']},{row['user_agent']},{row['request_duration']},{row['request_processing']},{row['service']},{row['extra_info']},{row['upstream_ip']},{row['upstream_response_size']},{row['upstream_response_duration']},{row['final_response_code']},{row['request_id']}\n"
 
     github_url = f"https://api.github.com/repos/{GITHUB_REPO}/contents/{file_path}"
     headers = {
@@ -113,11 +124,26 @@ def lambda_handler(event, context):
 
     # Get log file name from query parameters (default to DEFAULT_LOG_FILE if not provided)
     log_file_name = event.get("queryStringParameters", {}).get("log_file", DEFAULT_LOG_FILE)
-    upload_option = event.get("queryStringParameters", {}).get("upload", "github")
+    upload_option = event.get("queryStringParameters", {}).get("upload", "s3")
+    
+    # Get sort and filter parameters
+    sort_param = event.get("queryStringParameters", {}).get("sort", None)
+    filter_param = event.get("queryStringParameters", {}).get("filter", None)
+
+    sort_field, sort_order = (sort_param.split(",") if sort_param else [None, None])
+    filter_field, filter_value = (filter_param.split(",") if filter_param else [None, None])
 
     try:
         log_data = fetch_logs(log_file_name)
         parsed_data = parse_logs(log_data)
+
+        # Apply filtering
+        if filter_field and filter_value:
+            parsed_data = filter_data(parsed_data, filter_field, filter_value)
+
+        # Apply sorting
+        if sort_field:
+            parsed_data = sort_data(parsed_data, sort_field, sort_order)
 
         if upload_option == "s3":
             result = upload_to_s3(parsed_data, log_file_name)  # Uploading to S3
