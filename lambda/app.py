@@ -22,15 +22,15 @@ s3 = boto3.client("s3")
 # Get GitHub token from environment variables
 GITHUB_TOKEN = os.environ.get("GITHUB_TOKEN")
 
-# Updated Regex pattern for parsing Nginx logs
+# Regex pattern for parsing Nginx logs
 LOG_PATTERN = re.compile(
-    r'(?P<ip>[\d\.]+) - - \[(?P<date>.*?)\] "(?P<method>\w+) (?P<url>.*?) (?P<protocol>HTTP/\d\.\d)" (?P<status>\d+) (?P<size>\d+) "[^"]*" "[^"]*" (?P<response_time>\d+\.\d+) \[[^\]]+\] \[] (?P<server>[\w\-\.]+) (?P<request_time>\d+\.\d+) (?P<response_code>\d+) (?P<request_id>\w+)$'
+    r'(?P<ip>[\d\.]+) - - \[(?P<date>.*?)\] "(?P<method>\w+) (?P<url>.*?) (?P<protocol>HTTP/\d\.\d)" (?P<status>\d+) (?P<size>\d+) "(?P<referer>.*?)" "(?P<user_agent>.*?)" (?P<response_time>\d+\.\d+) \[.*\] \[] (?P<host_ip>[\d\.]+):(?P<host_port>\d+) (?P<bytes_sent>\d+) (?P<time_taken>\d+\.\d+) (?P<response_status>\d+) (?P<request_id>[a-z0-9]+)'
 )
 
 def fetch_logs(log_file_name):
     """Fetch log file from GitHub repository."""
     log_file_url = f"{RAW_GITHUB_URL}{log_file_name}"
-    print(f"Fetching log file from URL: {log_file_url}")  # Forced output to stdout
+    print(f"Fetching log file from URL: {log_file_url}")
 
     try:
         response = requests.get(log_file_url)
@@ -59,17 +59,14 @@ def upload_to_s3(parsed_data, log_file_name):
     s3_key = f"{S3_OUTPUT_FOLDER}{csv_filename}"  # Full S3 path
 
     # Convert parsed data to CSV format
-    csv_content = "ip,date,method,url,protocol,status,size,response_time,server,request_time,response_code,request_id\n"
+    csv_content = "ip,date,method,url,protocol,status,size,referer,user_agent,response_time,host_ip,host_port,bytes_sent,time_taken,response_status,request_id\n"
     for row in parsed_data:
-        csv_content += f"{row['ip']},{row['date']},{row['method']},{row['url']},{row['protocol']},{row['status']},{row['size']},{row['response_time']},{row['server']},{row['request_time']},{row['response_code']},{row['request_id']}\n"
+        csv_content += f"{row['ip']},{row['date']},{row['method']},{row['url']},{row['protocol']},{row['status']},{row['size']},{row['referer']},{row['user_agent']},{row['response_time']},{row['host_ip']},{row['host_port']},{row['bytes_sent']},{row['time_taken']},{row['response_status']},{row['request_id']}\n"
 
     try:
         # Upload to S3
-        s3.put_object(Bucket=S3_BUCKET_NAME, Key=s3_key, Body=csv_content, ContentType="text/csv")
-
-        # Generate URL
-        file_url = f"https://{S3_BUCKET_NAME}.s3.amazonaws.com/{s3_key}"
-
+        s3.put_object(Bucket=S3_BUCKET_NAME, Key=s3_key, Body=csv_content)
+        file_url = f"s3://{S3_BUCKET_NAME}/{s3_key}"
         print(f"File uploaded successfully to S3: {file_url}")
         return {"message": "File uploaded successfully", "url": file_url}
 
@@ -84,9 +81,9 @@ def upload_to_github(parsed_data, log_file_name):
     file_path = f"logs_output/{csv_filename}"
 
     # Convert parsed data to CSV format
-    csv_content = "ip,date,method,url,protocol,status,size,response_time,server,request_time,response_code,request_id\n"
+    csv_content = "ip,date,method,url,protocol,status,size,referer,user_agent,response_time,host_ip,host_port,bytes_sent,time_taken,response_status,request_id\n"
     for row in parsed_data:
-        csv_content += f"{row['ip']},{row['date']},{row['method']},{row['url']},{row['protocol']},{row['status']},{row['size']},{row['response_time']},{row['server']},{row['request_time']},{row['response_code']},{row['request_id']}\n"
+        csv_content += f"{row['ip']},{row['date']},{row['method']},{row['url']},{row['protocol']},{row['status']},{row['size']},{row['referer']},{row['user_agent']},{row['response_time']},{row['host_ip']},{row['host_port']},{row['bytes_sent']},{row['time_taken']},{row['response_status']},{row['request_id']}\n"
 
     github_url = f"https://api.github.com/repos/AaronShemtov/LogFileIntoCSV/contents/{file_path}"
     headers = {
@@ -122,7 +119,7 @@ def lambda_handler(event, context):
 
         if upload_option == "s3":
             result = upload_to_s3(parsed_data, log_file_name)  # Uploading to S3
-            
+
         else:
             result = upload_to_github(parsed_data, log_file_name)  # Default uploading to GitHub
 
