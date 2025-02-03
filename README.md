@@ -122,4 +122,4 @@ For the moment not all of fields are supported. In order to do that requests wit
 
 As well, as sorting and filtering with more than 1 fields together can be presented. For the moment API works only with 1 order field and 1 sorting field.
 
-There fiels currently are not supporting for using: **request**, **referrer**, **user_agent**. 
+There fiels currently are not supported for using with filter parameter: **datetime**, **request**, **referrer**, **user_agent**. 
