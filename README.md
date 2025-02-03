@@ -141,3 +141,14 @@ Make sure the following environment variables are set for the Lambda function:
 ### Notes
 - The log files must be placed in the `logs_input/` folder of the GitHub repository.
 - The resulting CSV file will be uploaded to the `logs-output/` folder in GitHub or the `logs-output/` folder in your S3 bucket.
+
+*System design:*
+The entire workflow begins in the LogFileIntoCSV/lambda folder of the GitHub repository, where the core code for processing logs resides. Sensitive information, such as credentials and configuration settings, is securely stored in GitHub Secrets, ensuring that your environment variables remain private throughout the deployment process.
+
+When changes are pushed to the main branch, the automated GitHub Actions flow is triggered. This initiates the creation of a Docker container, which packages your application along with all necessary dependencies. This container is then pushed to Amazon Elastic Container Registry (ECR), which acts as a secure storage repository for your container images.
+
+Once the Docker image is uploaded to Amazon ECR, it becomes the foundation for deploying an AWS Lambda function. The Lambda function is launched directly from the ECR image, which means the container’s environment is replicated in AWS, ensuring consistency in execution. To facilitate interaction with the outside world, the Lambda function is exposed through an API Gateway, which is linked to the Lambda function using a simple GET request method.
+
+When a request is made to this API Gateway endpoint, it triggers the Lambda function, which processes the Nginx log files. After processing, the resulting CSV file is uploaded to either Amazon S3 or GitHub, depending on the parameters specified in the request.
+
+Additionally, to ensure secure and authorized interactions with GitHub, the GITHUB_TOKEN—which is essential for accessing the repository—is securely stored in Lambda environment variables, maintaining smooth integration with GitHub during the file upload process.
