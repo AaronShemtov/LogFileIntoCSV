@@ -53,6 +53,16 @@ def parse_logs(log_data):
     print(f"Parsed {len(parsed_data)} lines of log data.")
     return parsed_data
 
+def filter_logs(parsed_data, filter_field, filtered_value):
+    """Filter parsed log data based on field and value."""
+    print(f"Filtering logs by {filter_field} = {filtered_value}.")
+    return [entry for entry in parsed_data if entry.get(filter_field) == filtered_value]
+
+def sort_logs(parsed_data, order_field, order_value):
+    """Sort parsed log data by field and order."""
+    print(f"Sorting logs by {order_field} in {order_value} order.")
+    return sorted(parsed_data, key=lambda x: x.get(order_field), reverse=(order_value == "desc"))
+
 def upload_to_s3(parsed_data, log_file_name):
     """Uploads parsed log data to an S3 bucket."""
     timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
@@ -114,10 +124,22 @@ def lambda_handler(event, context):
     # Get log file name from query parameters (default to DEFAULT_LOG_FILE if not provided)
     log_file_name = event.get("queryStringParameters", {}).get("log_file", DEFAULT_LOG_FILE)
     upload_option = event.get("queryStringParameters", {}).get("upload", "github")
+    filter_field = event.get("queryStringParameters", {}).get("filter_field", None)
+    filtered_value = event.get("queryStringParameters", {}).get("filtered_value", None)
+    order_field = event.get("queryStringParameters", {}).get("order_field", None)
+    order_value = event.get("queryStringParameters", {}).get("order_value", None)
 
     try:
         log_data = fetch_logs(log_file_name)
         parsed_data = parse_logs(log_data)
+
+        # Apply filtering if specified
+        if filter_field and filtered_value:
+            parsed_data = filter_logs(parsed_data, filter_field, filtered_value)
+
+        # Apply sorting if specified
+        if order_field and order_value:
+            parsed_data = sort_logs(parsed_data, order_field, order_value)
 
         if upload_option == "s3":
             result = upload_to_s3(parsed_data, log_file_name)  # Uploading to S3
