@@ -22,17 +22,10 @@ s3 = boto3.client("s3")
 # Get GitHub token from environment variables
 GITHUB_TOKEN = os.environ.get("GITHUB_TOKEN")
 
-# Regular expression pattern to parse the log lines
-log_pattern = re.compile(
+# Regular expression pattern for parsing Nginx logs
+LOG_PATTERN = re.compile(
     r'(?P<ip>\S+) - - \[(?P<datetime>[^\]]+)\] "(?P<method>[A-Z]+) (?P<request>.*?) (?P<protocol>HTTP/\d\.\d)" (?P<status>\d+) (?P<response_size>\d+) "(?P<referrer>.*?)" "(?P<user_agent>.*?)" (?P<request_duration>\d+) (?P<request_processing>\S+) \[(?P<service>[^\]]+)\] (?P<extra_info>\S+) (?P<upstream_ip>\S+) (?P<upstream_response_size>\d+) (?P<upstream_response_duration>\S+) (?P<final_response_code>\d+) (?P<request_id>\S+)'
 )
-
-# Function to parse each log line
-def parse_log_line(line):
-    match = log_pattern.match(line)
-    if match:
-        return match.groupdict()
-    return None
 
 def fetch_logs(log_file_name):
     """Fetch log file from GitHub repository."""
@@ -49,21 +42,13 @@ def fetch_logs(log_file_name):
         raise FileNotFoundError(f"Log file {log_file_name} not found in GitHub repository.")
 
 def parse_logs(log_data):
-    """Parse logs using regex pattern and extract user-agent details."""
+    """Parse logs using regex pattern."""
     print("Parsing log data using regex pattern.")
     parsed_data = []
     for line in log_data.splitlines():
-        log_data_dict = parse_log_line(line)
-        if log_data_dict:
-            # Parse user-agent using the user-agent regex (optional)
-            user_agent = log_data_dict.get('user_agent', '')
-            ua_match = USER_AGENT_PATTERN.match(user_agent)
-
-            if ua_match:
-                ua_data = ua_match.groupdict()
-                log_data_dict.update(ua_data)
-
-            parsed_data.append(log_data_dict)
+        match = LOG_PATTERN.match(line)
+        if match:
+            parsed_data.append(match.groupdict())
 
     print(f"Parsed {len(parsed_data)} lines of log data.")
     return parsed_data
@@ -75,9 +60,9 @@ def upload_to_s3(parsed_data, log_file_name):
     s3_key = f"{S3_OUTPUT_FOLDER}{csv_filename}"
 
     # Convert parsed data to CSV format
-    csv_content = "ip,datetime,method,request,protocol,status,response_size,referrer,user_agent,request_duration,request_processing,service,extra_info,upstream_ip,upstream_response_size,upstream_response_duration,final_response_code,request_id,browser,os,webkit_version,engine,chrome_version,safari_version\n"
+    csv_content = "ip,datetime,method,request,protocol,status,response_size,referrer,user_agent,request_duration,request_processing,service,extra_info,upstream_ip,upstream_response_size,upstream_response_duration,final_response_code,request_id\n"
     for row in parsed_data:
-        csv_content += f"{row['ip']},{row['datetime']},{row['method']},{row['request']},{row['protocol']},{row['status']},{row['response_size']},{row['referrer']},{row['user_agent']},{row['request_duration']},{row['request_processing']},{row['service']},{row['extra_info']},{row['upstream_ip']},{row['upstream_response_size']},{row['upstream_response_duration']},{row['final_response_code']},{row['request_id']},{row.get('browser', '')},{row.get('os', '')},{row.get('webkit_version', '')},{row.get('engine', '')},{row.get('chrome_version', '')},{row.get('safari_version', '')}\n"
+        csv_content += f"{row['ip']},{row['datetime']},{row['method']},{row['request']},{row['protocol']},{row['status']},{row['response_size']},{row['referrer']},{row['user_agent']},{row['request_duration']},{row['request_processing']},{row['service']},{row['extra_info']},{row['upstream_ip']},{row['upstream_response_size']},{row['upstream_response_duration']},{row['final_response_code']},{row['request_id']}\n"
 
     try:
         # Upload to S3
@@ -96,9 +81,9 @@ def upload_to_github(parsed_data, log_file_name):
     file_path = f"logs_output/{csv_filename}"
 
     # Convert parsed data to CSV format
-    csv_content = "ip,datetime,method,request,protocol,status,response_size,referrer,user_agent,request_duration,request_processing,service,extra_info,upstream_ip,upstream_response_size,upstream_response_duration,final_response_code,request_id,browser,os,webkit_version,engine,chrome_version,safari_version\n"
+    csv_content = "ip,datetime,method,request,protocol,status,response_size,referrer,user_agent,request_duration,request_processing,service,extra_info,upstream_ip,upstream_response_size,upstream_response_duration,final_response_code,request_id\n"
     for row in parsed_data:
-        csv_content += f"{row['ip']},{row['datetime']},{row['method']},{row['request']},{row['protocol']},{row['status']},{row['response_size']},{row['referrer']},{row['user_agent']},{row['request_duration']},{row['request_processing']},{row['service']},{row['extra_info']},{row['upstream_ip']},{row['upstream_response_size']},{row['upstream_response_duration']},{row['final_response_code']},{row['request_id']},{row.get('browser', '')},{row.get('os', '')},{row.get('webkit_version', '')},{row.get('engine', '')},{row.get('chrome_version', '')},{row.get('safari_version', '')}\n"
+        csv_content += f"{row['ip']},{row['datetime']},{row['method']},{row['request']},{row['protocol']},{row['status']},{row['response_size']},{row['referrer']},{row['user_agent']},{row['request_duration']},{row['request_processing']},{row['service']},{row['extra_info']},{row['upstream_ip']},{row['upstream_response_size']},{row['upstream_response_duration']},{row['final_response_code']},{row['request_id']}\n"
 
     github_url = f"https://api.github.com/repos/{GITHUB_REPO}/contents/{file_path}"
     headers = {
