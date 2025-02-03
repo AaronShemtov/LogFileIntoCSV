@@ -25,7 +25,7 @@ url: https://32se2pmvb5.execute-api.eu-central-1.amazonaws.com
   - `github`: Upload the CSV to GitHub.
   - `s3`: Upload the CSV to S3.
 - `filter_field`: (optional) The field by which to filter the logs.
-- `filtered_value`: (optional) The value for the filter.
+- `filter_value`: (optional) The value for the filter.
 - `order_field`: (optional) The field by which to sort the logs.
 - `order_value`: (optional) The sort order. Options:
   - `asc`: Sort in ascending order.
@@ -36,12 +36,12 @@ url: https://32se2pmvb5.execute-api.eu-central-1.amazonaws.com
 #### 1. Filter logs by `status` field and upload to S3
 
 GET
-https://32se2pmvb5.execute-api.eu-central-1.amazonaws.com?log_file=nginx.log&upload=s3&filter_field=status&filtered_value=200
+https://32se2pmvb5.execute-api.eu-central-1.amazonaws.com?log_file=nginx.log&upload=s3&filter_field=status&filter_value=200
 
 - `log_file=nginx.log`: Specifies the log file to fetch.
 - `upload=s3`: Indicates that the result will be uploaded to **S3**.
 - `filter_field=status`: Filters the logs by the `status` field.
-- `filtered_value=200`: Includes only logs where the `status` field equals `200`.
+- `filter_value=200`: Includes only logs where the `status` field equals `200`.
 
 #### 2. Sort logs by `datetime` in descending order and upload to GitHub
 
@@ -56,24 +56,14 @@ https://32se2pmvb5.execute-api.eu-central-1.amazonaws.com?log_file=nginx.log&upl
 #### 3. Filter logs by `method` field, sort by `request_duration`, and upload to S3
 
 GET
-https://32se2pmvb5.execute-api.eu-central-1.amazonaws.com?log_file=nginx.log&upload=s3&filter_field=method&filtered_value=GET&order_field=request_duration&order_value=asc
+https://32se2pmvb5.execute-api.eu-central-1.amazonaws.com?log_file=nginx.log&upload=s3&filter_field=method&filter_value=GET&order_field=request_duration&order_value=asc
 
 - `log_file=nginx.log`: Specifies the log file to fetch.
 - `upload=s3`: Indicates that the result will be uploaded to **S3**.
 - `filter_field=method`: Filters the logs by the `method` field.
-- `filtered_value=GET`: Includes only logs where the `method` field equals `GET`.
+- `filter_value=GET`: Includes only logs where the `method` field equals `GET`.
 - `order_field=request_duration`: Sorts the logs by the `request_duration` field.
 - `order_value=asc`: Sorts the logs in **ascending** order based on the `request_duration` field.
-
-#### 4. No filter or sorting, upload to GitHub
-
-GET
-https://32se2pmvb5.execute-api.eu-central-1.amazonaws.com?log_file=nginx.log&upload=github
-
-
-- `log_file=nginx.log`: Specifies the log file to fetch.
-- `upload=github`: Indicates that the result will be uploaded to **GitHub**.
-- No filtering or sorting applied (defaults to no filter and default sorting). 
 
 # System design:
 The entire workflow begins in the LogFileIntoCSV/lambda folder of the GitHub repository, where the core code for processing logs resides. Sensitive information, such as credentials and configuration settings, is securely stored in GitHub Secrets, ensuring that your environment variables remain private throughout the deployment process.

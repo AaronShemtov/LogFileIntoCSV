@@ -53,10 +53,10 @@ def parse_logs(log_data):
     print(f"Parsed {len(parsed_data)} lines of log data.")
     return parsed_data
 
-def filter_logs(parsed_data, filter_field, filtered_value):
+def filter_logs(parsed_data, filter_field, filter_value):
     """Filter parsed log data based on field and value."""
-    print(f"Filtering logs by {filter_field} = {filtered_value}.")
-    return [entry for entry in parsed_data if entry.get(filter_field) == filtered_value]
+    print(f"Filtering logs by {filter_field} = {filter_value}.")
+    return [entry for entry in parsed_data if entry.get(filter_field) == filter_value]
 
 def sort_logs(parsed_data, order_field, order_value):
     """Sort parsed log data by field and order."""
@@ -125,7 +125,7 @@ def lambda_handler(event, context):
     log_file_name = event.get("queryStringParameters", {}).get("log_file", DEFAULT_LOG_FILE)
     upload_option = event.get("queryStringParameters", {}).get("upload", "github")
     filter_field = event.get("queryStringParameters", {}).get("filter_field", None)
-    filtered_value = event.get("queryStringParameters", {}).get("filtered_value", None)
+    filter_value = event.get("queryStringParameters", {}).get("filter_value", None)
     order_field = event.get("queryStringParameters", {}).get("order_field", None)
     order_value = event.get("queryStringParameters", {}).get("order_value", None)
 
@@ -134,8 +134,8 @@ def lambda_handler(event, context):
         parsed_data = parse_logs(log_data)
 
         # Apply filtering if specified
-        if filter_field and filtered_value:
-            parsed_data = filter_logs(parsed_data, filter_field, filtered_value)
+        if filter_field and filter_value:
+            parsed_data = filter_logs(parsed_data, filter_field, filter_value)
 
         # Apply sorting if specified
         if order_field and order_value:
