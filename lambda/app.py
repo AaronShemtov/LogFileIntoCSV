@@ -1,136 +1,45 @@
-import re
 import csv
-import json
-import requests
-import boto3
-import base64
-from datetime import datetime
-import os
+import re
 
-# Constants
-GITHUB_REPO = "AaronShemtov/LogFileIntoCSV"  # GitHub Repository
-RAW_GITHUB_URL = f"https://raw.githubusercontent.com/{GITHUB_REPO}/main/logs_input/"
-DEFAULT_LOG_FILE = "nginx.log"  # Default log file name
+def parse_log_line(line):
+    # Regular expression to capture the relevant parts of each log line
+    log_pattern = r'(?P<ip>[\d\.]+) - - \[(?P<timestamp>[^\]]+)\] "(?P<method>\S+) (?P<url>\S+) HTTP/[\d\.]+" (?P<status_code>\d+) (?P<response_size>\d+) "(?P<referer>[^"]*)" "(?P<user_agent>[^"]*)" (?P<request_time>\d+) (?P<upstream_response_time>\d+\.\d+) \[(?P<upstream_name>[^\]]+)\] \[\] (?P<server_ip>[\d\.]+):(?P<server_port>\d+) (?P<response_size_2>\d+) (?P<request_time_2>\d+\.\d+) (?P<status_code_2>\d+) (?P<request_id>\w+)'
+    
+    match = re.match(log_pattern, line)
+    
+    if match:
+        log_data = match.groupdict()
 
-# S3 Configuration
-S3_BUCKET_NAME = "logs-result-csv"
-S3_OUTPUT_FOLDER = "logs-output/"
+        # Parse user_agent to separate components
+        user_agent = log_data['user_agent']
+        ua_pattern = r'(?P<browser>[\w]+(?:/[\d\.]+)?) \((?P<os>[^)]+)\) (?P<webkit_version>AppleWebKit/[0-9\.]+) \((?P<engine>KHTML, like Gecko)\) (?P<chrome_version>Chrome/[0-9\.]+) (?P<safari_version>Safari/[0-9\.]+)'
+        ua_match = re.match(ua_pattern, user_agent)
 
-# Initialize S3 Client
-s3 = boto3.client("s3")
+        if ua_match:
+            ua_data = ua_match.groupdict()
+            log_data.update(ua_data)
+        
+        return log_data
+    else:
+        return None
 
-# Get GitHub token from environment variables
-GITHUB_TOKEN = os.environ.get("GITHUB_TOKEN")
+def parse_log_file(file_path, output_csv_path):
+    with open(file_path, 'r') as log_file, open(output_csv_path, 'w', newline='') as csvfile:
+        fieldnames = [
+            'ip', 'timestamp', 'method', 'url', 'status_code', 'response_size', 'referer', 
+            'user_agent', 'request_time', 'upstream_response_time', 'upstream_name', 'server_ip',
+            'server_port', 'response_size_2', 'request_time_2', 'status_code_2', 'request_id',
+            'browser', 'os', 'webkit_version', 'engine', 'chrome_version', 'safari_version'
+        ]
+        writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+        writer.writeheader()
 
-# Regex pattern for parsing Nginx logs
-LOG_PATTERN = re.compile(
-    r'(?P<ip>[\d\.]+) - - \[(?P<date>[\w/:]+\s[+\-]\d{4})\] "(?P<method>\w+) (?P<url>.*?) (?P<protocol>HTTP/\d+\.\d+)" (?P<status>\d+) (?P<size>\d+) "(?P<referer>.*?)" "(?P<user_agent>.*?)" (?P<response_time>\d+) (?P<time_taken>\d+\.\d+) \[(?P<host>[^\]]+)\] \[\] (?P<host_ip>[\d\.]+):(?P<host_port>\d+) (?P<bytes_sent>\d+) (?P<request_id>[a-z0-9]+)'
-)
+        for line in log_file:
+            parsed_data = parse_log_line(line)
+            if parsed_data:
+                writer.writerow(parsed_data)
 
-def fetch_logs(log_file_name):
-    """Fetch log file from GitHub repository."""
-    log_file_url = f"{RAW_GITHUB_URL}{log_file_name}"
-    print(f"Fetching log file from URL: {log_file_url}")
-
-    try:
-        response = requests.get(log_file_url)
-        response.raise_for_status()
-        print("Log file fetched successfully from GitHub.")
-        return response.text
-    except requests.exceptions.RequestException as e:
-        print(f"Error fetching log file: {str(e)}")
-        raise FileNotFoundError(f"Log file {log_file_name} not found in GitHub repository.")
-
-def parse_logs(log_data):
-    """Parse logs using regex pattern."""
-    print("Parsing log data using regex pattern.")
-    parsed_data = []
-    for line in log_data.splitlines():
-        match = LOG_PATTERN.match(line)
-        if match:
-            parsed_data.append(match.groupdict())
-    print(f"Parsed {len(parsed_data)} lines of log data.")
-    return parsed_data
-
-def upload_to_s3(parsed_data, log_file_name):
-    """Uploads parsed log data to an S3 bucket."""
-    timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-    csv_filename = f"output_{timestamp}.csv"
-    s3_key = f"{S3_OUTPUT_FOLDER}{csv_filename}"  # Full S3 path
-
-    # Convert parsed data to CSV format
-    csv_content = "ip,date,method,url,protocol,status,size,referer,user_agent,response_time,host,host_ip,host_port,bytes_sent,request_id\n"
-    for row in parsed_data:
-        csv_content += f"{row['ip']},{row['date']},{row['method']},{row['url']},{row['protocol']},{row['status']},{row['size']},{row['referer']},{row['user_agent']},{row['response_time']},{row['host']},{row['host_ip']},{row['host_port']},{row['bytes_sent']},{row['request_id']}\n"
-
-    try:
-        # Upload to S3
-        s3.put_object(Bucket=S3_BUCKET_NAME, Key=s3_key, Body=csv_content)
-        file_url = f"s3://{S3_BUCKET_NAME}/{s3_key}"
-        print(f"File uploaded successfully to S3: {file_url}")
-        return {"message": "File uploaded successfully", "url": file_url}
-
-    except Exception as e:
-        print(f"Error uploading file to S3: {str(e)}")
-        return {"error": f"Failed to upload file: {str(e)}"}
-
-def upload_to_github(parsed_data, log_file_name):
-    """Uploads parsed log data to GitHub repository."""
-    timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-    csv_filename = f"output_{timestamp}.csv"
-    file_path = f"logs_output/{csv_filename}"
-
-    # Convert parsed data to CSV format
-    csv_content = "ip,date,method,url,protocol,status,size,referer,user_agent,response_time,host,host_ip,host_port,bytes_sent,request_id\n"
-    for row in parsed_data:
-        csv_content += f"{row['ip']},{row['date']},{row['method']},{row['url']},{row['protocol']},{row['status']},{row['size']},{row['referer']},{row['user_agent']},{row['response_time']},{row['host']},{row['host_ip']},{row['host_port']},{row['bytes_sent']},{row['request_id']}\n"
-
-    github_url = f"https://api.github.com/repos/AaronShemtov/LogFileIntoCSV/contents/{file_path}"
-    headers = {
-        "Authorization": f"token {GITHUB_TOKEN}",
-        "Content-Type": "application/json"
-    }
-
-    data = {
-        "message": f"Add log file {csv_filename}. File uploaded by Lambda",
-        "content": base64.b64encode(csv_content.encode()).decode("utf-8"),
-        "branch": "main"
-    }
-
-    try:
-        response = requests.put(github_url, headers=headers, json=data)
-        response.raise_for_status()
-        print(f"File uploaded successfully to GitHub: {github_url}")
-        return {"message": "File uploaded successfully", "url": github_url}
-    except requests.exceptions.RequestException as e:
-        print(f"Failed to upload file to GitHub: {str(e)}")
-        return {"error": f"Failed to upload file: {str(e)}"}
-
-def lambda_handler(event, context):
-    print("Lambda function started.")
-
-    # Get log file name from query parameters (default to DEFAULT_LOG_FILE if not provided)
-    log_file_name = event.get("queryStringParameters", {}).get("log_file", DEFAULT_LOG_FILE)
-    upload_option = event.get("queryStringParameters", {}).get("upload", "s3")
-
-    try:
-        log_data = fetch_logs(log_file_name)
-        parsed_data = parse_logs(log_data)
-
-        if upload_option == "s3":
-            result = upload_to_s3(parsed_data, log_file_name)  # Uploading to S3
-
-        else:
-            result = upload_to_github(parsed_data, log_file_name)  # Default uploading to GitHub
-
-        print("Lambda function completed successfully.")
-        return {
-            "statusCode": 200,
-            "body": json.dumps(result)
-        }
-    except Exception as e:
-        print(f"Lambda function error: {str(e)}")
-        return {
-            "statusCode": 500,
-            "body": json.dumps({"error": str(e)}),
-        }
+if __name__ == "__main__":
+    log_file_path = 'access.log'  # Replace with your log file path
+    output_csv_file = 'parsed_logs.csv'  # Output CSV file path
+    parse_log_file(log_file_path, output_csv_file)
