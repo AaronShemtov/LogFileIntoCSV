@@ -24,7 +24,7 @@ GITHUB_TOKEN = os.environ.get("GITHUB_TOKEN")
 
 # Regex pattern for parsing Nginx logs
 LOG_PATTERN = re.compile(
-    r'(?P<ip>[\d\.]+) - - \[(?P<date>.*?)\] "(?P<method>\w+) (?P<url>.*?) (?P<protocol>HTTP/\d\.\d)" (?P<status>\d+) (?P<size>\d+) "(?P<referer>.*?)" "(?P<user_agent>.*?)" (?P<response_time>\d+\.\d+) \[.*\] \[] (?P<host_ip>[\d\.]+):(?P<host_port>\d+) (?P<bytes_sent>\d+) (?P<time_taken>\d+\.\d+) (?P<response_status>\d+) (?P<request_id>[a-z0-9]+)'
+    r'(?P<ip>[\d\.]+) - - \[(?P<date>[\w/:]+\s[+\-]\d{4})\] "(?P<method>\w+) (?P<url>.*?) (?P<protocol>HTTP/\d+\.\d+)" (?P<status>\d+) (?P<size>\d+) "(?P<referer>.*?)" "(?P<user_agent>.*?)" (?P<response_time>\d+) (?P<time_taken>\d+\.\d+) \[(?P<host>[^\]]+)\] \[\] (?P<host_ip>[\d\.]+):(?P<host_port>\d+) (?P<bytes_sent>\d+) (?P<request_id>[a-z0-9]+)'
 )
 
 def fetch_logs(log_file_name):
@@ -59,9 +59,9 @@ def upload_to_s3(parsed_data, log_file_name):
     s3_key = f"{S3_OUTPUT_FOLDER}{csv_filename}"  # Full S3 path
 
     # Convert parsed data to CSV format
-    csv_content = "ip,date,method,url,protocol,status,size,referer,user_agent,response_time,host_ip,host_port,bytes_sent,time_taken,response_status,request_id\n"
+    csv_content = "ip,date,method,url,protocol,status,size,referer,user_agent,response_time,host,host_ip,host_port,bytes_sent,request_id\n"
     for row in parsed_data:
-        csv_content += f"{row['ip']},{row['date']},{row['method']},{row['url']},{row['protocol']},{row['status']},{row['size']},{row['referer']},{row['user_agent']},{row['response_time']},{row['host_ip']},{row['host_port']},{row['bytes_sent']},{row['time_taken']},{row['response_status']},{row['request_id']}\n"
+        csv_content += f"{row['ip']},{row['date']},{row['method']},{row['url']},{row['protocol']},{row['status']},{row['size']},{row['referer']},{row['user_agent']},{row['response_time']},{row['host']},{row['host_ip']},{row['host_port']},{row['bytes_sent']},{row['request_id']}\n"
 
     try:
         # Upload to S3
@@ -81,9 +81,9 @@ def upload_to_github(parsed_data, log_file_name):
     file_path = f"logs_output/{csv_filename}"
 
     # Convert parsed data to CSV format
-    csv_content = "ip,date,method,url,protocol,status,size,referer,user_agent,response_time,host_ip,host_port,bytes_sent,time_taken,response_status,request_id\n"
+    csv_content = "ip,date,method,url,protocol,status,size,referer,user_agent,response_time,host,host_ip,host_port,bytes_sent,request_id\n"
     for row in parsed_data:
-        csv_content += f"{row['ip']},{row['date']},{row['method']},{row['url']},{row['protocol']},{row['status']},{row['size']},{row['referer']},{row['user_agent']},{row['response_time']},{row['host_ip']},{row['host_port']},{row['bytes_sent']},{row['time_taken']},{row['response_status']},{row['request_id']}\n"
+        csv_content += f"{row['ip']},{row['date']},{row['method']},{row['url']},{row['protocol']},{row['status']},{row['size']},{row['referer']},{row['user_agent']},{row['response_time']},{row['host']},{row['host_ip']},{row['host_port']},{row['bytes_sent']},{row['request_id']}\n"
 
     github_url = f"https://api.github.com/repos/AaronShemtov/LogFileIntoCSV/contents/{file_path}"
     headers = {
