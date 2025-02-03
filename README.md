@@ -35,7 +35,6 @@ url: https://32se2pmvb5.execute-api.eu-central-1.amazonaws.com
 
 #### 1. Filter logs by `status` field and upload to S3
 
-**URL:**
 GET
 https://32se2pmvb5.execute-api.eu-central-1.amazonaws.com?log_file=nginx.log&upload=s3&filter_field=status&filtered_value=200
 
@@ -47,7 +46,6 @@ https://32se2pmvb5.execute-api.eu-central-1.amazonaws.com?log_file=nginx.log&upl
 
 #### 2. Sort logs by `datetime` in descending order and upload to GitHub
 
-**URL:**
 GET
 https://32se2pmvb5.execute-api.eu-central-1.amazonaws.com?log_file=nginx.log&upload=github&order_field=datetime&order_value=desc
 
@@ -60,7 +58,6 @@ https://32se2pmvb5.execute-api.eu-central-1.amazonaws.com?log_file=nginx.log&upl
 
 #### 3. Filter logs by `method` field, sort by `request_duration`, and upload to S3
 
-**URL:**
 GET
 https://32se2pmvb5.execute-api.eu-central-1.amazonaws.com?log_file=nginx.log&upload=s3&filter_field=method&filtered_value=GET&order_field=request_duration&order_value=asc
 
@@ -74,7 +71,6 @@ https://32se2pmvb5.execute-api.eu-central-1.amazonaws.com?log_file=nginx.log&upl
 
 #### 4. No filter or sorting, upload to GitHub
 
-**URL:**
 GET
 https://32se2pmvb5.execute-api.eu-central-1.amazonaws.com?log_file=nginx.log&upload=github
 
