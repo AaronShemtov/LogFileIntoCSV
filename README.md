@@ -26,6 +26,8 @@ Response of request has the form:
 ### Query Parameters
 
 - `log_file`: (optional) The name of the log file to fetch. Default: `nginx.log`.
+ If the log file is not found in repository the response will be presented:
+ {"error": "Log file {file_name} not found in GitHub repository."}
 - `upload`: (optional) The destination for uploading the processed file. Options:
   - `github`: Upload the CSV to GitHub.
   - `s3`: Upload the CSV to S3.
@@ -41,12 +43,17 @@ Response of request has the form:
 #### 1. Filter logs by `status` field and upload to S3
 
 GET
-https://32se2pmvb5.execute-api.eu-central-1.amazonaws.com?log_file=nginx.log&upload=s3&filter_field=status&filter_value=200
+https://32se2pmvb5.execute-api.eu-central-1.amazonaws.com?log_file=nginx_second_file.log&upload=s3&filter_field=status&filter_value=200
 
-- `log_file=nginx.log`: Specifies the log file to fetch.
+- `log_file=nginx_second_file.log`: Specifies the log file to fetch.
 - `upload=s3`: Indicates that the result will be uploaded to **S3**.
 - `filter_field=status`: Filters the logs by the `status` field.
 - `filter_value=200`: Includes only logs where the `status` field equals `200`.
+
+Example of response: {"message": "File uploaded successfully", "url": "https://logs-result-csv.s3.amazonaws.com/logs-output/output_2025-02-03_18-18-42.csv"}
+
+Resulting file can be downloaded by pressink on the link:
+https://logs-result-csv.s3.amazonaws.com/logs-output/output_2025-02-03_18-18-42.csv
 
 #### 2. Sort logs by `datetime` in descending order and upload to GitHub
 
@@ -57,6 +64,12 @@ https://32se2pmvb5.execute-api.eu-central-1.amazonaws.com?log_file=nginx.log&upl
 - `upload=github`: Indicates that the result will be uploaded to **GitHub**.
 - `order_field=datetime`: Sorts the logs by the `datetime` field.
 - `order_value=desc`: Sorts the logs in **descending** order based on the `datetime` field.
+
+Example of response: {"message": "File uploaded successfully", "url": "https://api.github.com/repos/AaronShemtov/LogFileIntoCSV/contents/logs_output/output_2025-02-03_18-16-03.csv"}
+
+Resulting file can be downloaded by the name from github:
+'LogFileIntoCSV/logs_output/output_2025-02-03_18-16-03.csv'
+
 
 #### 3. Filter logs by `method` field, sort by `request_duration`, and upload to S3
 
@@ -70,6 +83,28 @@ https://32se2pmvb5.execute-api.eu-central-1.amazonaws.com?log_file=nginx.log&upl
 - `order_field=request_duration`: Sorts the logs by the `request_duration` field.
 - `order_value=asc`: Sorts the logs in **ascending** order based on the `request_duration` field.
 
+Example of response: {"message": "File uploaded successfully", "url": "https://logs-result-csv.s3.amazonaws.com/logs-output/output_2025-02-03_18-11-15.csv"}
+
+Resulting file can be downloaded by pressink on the link:
+https://logs-result-csv.s3.amazonaws.com/logs-output/output_2025-02-03_18-11-15.csv
+
+#### 4. Filter logs by `upstream_response_duration` field, sort by `upstream_response_size`, and upload to S3
+
+GET
+https://32se2pmvb5.execute-api.eu-central-1.amazonaws.com?upload=s3&filter_field=upstream_response_duration&filter_value=0.004&order_field=upstream_response_size&order_value=desc
+
+- `log_file=nginx.log`: this file will be processed by default.
+- `upload=s3`: Indicates that the result will be uploaded to **S3**.
+- `filter_field=upstream_response_duration`: Filters the logs by the `upstream_response_duration` field.
+- `filter_value=0.004`: Includes only logs where the `upstream_response_duration` field equals `0.004`.
+- `order_field=upstream_response_size`: Sorts the logs by the `upstream_response_size` field.
+- `order_value=desc`: Sorts the logs in **descending** order based on the `upstream_response_size` field.
+
+Example of response: {"message": "File uploaded successfully", "url": "https://logs-result-csv.s3.amazonaws.com/logs-output/output_2025-02-03_18-02-40.csv"}
+
+Resulting file can be downloaded by pressink on the link:
+https://logs-result-csv.s3.amazonaws.com/logs-output/output_2025-02-03_18-02-40.csv
+
 # System design:
 The entire workflow begins in the LogFileIntoCSV/lambda folder of the GitHub repository, where the core code for processing logs resides. Sensitive information, such as credentials and configuration settings, is securely stored in GitHub Secrets, ensuring that your environment variables remain private throughout the deployment process.
 
@@ -80,3 +115,11 @@ Once the Docker image is uploaded to Amazon ECR, it becomes the foundation for d
 When a request is made to this API Gateway endpoint, it triggers the Lambda function, which processes the Nginx log files. After processing, the resulting CSV file is uploaded to either Amazon S3 or GitHub, depending on the parameters specified in the request.
 
 Additionally, to ensure secure and authorized interactions with GitHub, the GITHUB_TOKEN—which is essential for accessing the repository—is securely stored in Lambda environment variables, maintaining smooth integration with GitHub during the file upload process.
+
+### Future Improvments
+
+For the moment not all of fields are supported. In order to do that requests with body should be implementes and app.py script should be enhanced accordingly so that it will be able to work with it.
+
+As well, as sorting and filtering with more than 1 fields together can be presented. For the moment API works only with 1 order field and 1 sorting field.
+
+There fiels currently are not supporting for using: *request*, *referrer*, *user_agent*. 
