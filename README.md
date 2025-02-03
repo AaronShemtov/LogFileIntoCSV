@@ -38,7 +38,6 @@ url: https://32se2pmvb5.execute-api.eu-central-1.amazonaws.com
 GET
 https://32se2pmvb5.execute-api.eu-central-1.amazonaws.com?log_file=nginx.log&upload=s3&filter_field=status&filtered_value=200
 
-**Explanation:**
 - `log_file=nginx.log`: Specifies the log file to fetch.
 - `upload=s3`: Indicates that the result will be uploaded to **S3**.
 - `filter_field=status`: Filters the logs by the `status` field.
@@ -49,8 +48,6 @@ https://32se2pmvb5.execute-api.eu-central-1.amazonaws.com?log_file=nginx.log&upl
 GET
 https://32se2pmvb5.execute-api.eu-central-1.amazonaws.com?log_file=nginx.log&upload=github&order_field=datetime&order_value=desc
 
-
-**Explanation:**
 - `log_file=nginx.log`: Specifies the log file to fetch.
 - `upload=github`: Indicates that the result will be uploaded to **GitHub**.
 - `order_field=datetime`: Sorts the logs by the `datetime` field.
@@ -61,7 +58,6 @@ https://32se2pmvb5.execute-api.eu-central-1.amazonaws.com?log_file=nginx.log&upl
 GET
 https://32se2pmvb5.execute-api.eu-central-1.amazonaws.com?log_file=nginx.log&upload=s3&filter_field=method&filtered_value=GET&order_field=request_duration&order_value=asc
 
-**Explanation:**
 - `log_file=nginx.log`: Specifies the log file to fetch.
 - `upload=s3`: Indicates that the result will be uploaded to **S3**.
 - `filter_field=method`: Filters the logs by the `method` field.
@@ -75,7 +71,6 @@ GET
 https://32se2pmvb5.execute-api.eu-central-1.amazonaws.com?log_file=nginx.log&upload=github
 
 
-**Explanation:**
 - `log_file=nginx.log`: Specifies the log file to fetch.
 - `upload=github`: Indicates that the result will be uploaded to **GitHub**.
 - No filtering or sorting applied (defaults to no filter and default sorting). 
