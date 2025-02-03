@@ -24,17 +24,14 @@ GITHUB_TOKEN = os.environ.get("GITHUB_TOKEN")
 
 # Regex pattern for parsing Nginx logs
 LOG_PATTERN = re.compile(
-    r'(?P<ip>[\d\.]+) - - \[(?P<date>.*?)\] "(?P<method>\w+) (?P<url>.*?) (?P<protocol>HTTP/\d\.\d)" '
-    r'(?P<status>\d+) (?P<size>\d+) "(?P<referrer>.*?)" "(?P<user_agent>.*?)" (?P<request_time>\d+\.\d+) '
-    r'\[?(?P<upstream>.*?)\]? (?P<request_host>[\d\.]+:\d+) (?P<response_time>\d+\.\d+) (?P<upstream_status>\d+) '
-    r'(?P<request_id>[a-f0-9]{32})'
+    r'(?P<ip>[\d\.]+) - - \[(?P<date>.*?)\] "(?P<method>\w+) (?P<url>.*?) (?P<protocol>HTTP/\d\.\d)" (?P<status>\d+) (?P<size>\d+)'
 )
 
 def fetch_logs(log_file_name):
     """Fetch log file from GitHub repository."""
     log_file_url = f"{RAW_GITHUB_URL}{log_file_name}"
-    print(f"Fetching log file from URL: {log_file_url}")  # Forced stdout output
-    
+    print(f"Fetching log file from URL: {log_file_url}")  # Принудительный вывод в stdout
+
     try:
         response = requests.get(log_file_url)
         response.raise_for_status()
@@ -62,14 +59,14 @@ def upload_to_s3(parsed_data, log_file_name):
     s3_key = f"{S3_OUTPUT_FOLDER}{csv_filename}"  # Full S3 path
 
     # Convert parsed data to CSV format
-    csv_content = "ip,date,method,url,protocol,status,size,referrer,user_agent,request_time,upstream,request_host,response_time,upstream_status,request_id\n"
+    csv_content = "ip,date,method,url,protocol,status,size\n"
     for row in parsed_data:
-        csv_content += f"{row['ip']},{row['date']},{row['method']},{row['url']},{row['protocol']},{row['status']},{row['size']},{row['referrer']},{row['user_agent']},{row['request_time']},{row['upstream']},{row['request_host']},{row['response_time']},{row['upstream_status']},{row['request_id']}\n"
+        csv_content += f"{row['ip']},{row['date']},{row['method']},{row['url']},{row['protocol']},{row['status']},{row['size']}\n"
 
     try:
         # Upload to S3
         s3.put_object(Bucket=S3_BUCKET_NAME, Key=s3_key, Body=csv_content, ContentType="text/csv")
-        
+
         # Generate URL
         file_url = f"https://{S3_BUCKET_NAME}.s3.amazonaws.com/{s3_key}"
 
@@ -87,9 +84,9 @@ def upload_to_github(parsed_data, log_file_name):
     file_path = f"logs_output/{csv_filename}"
 
     # Convert parsed data to CSV format
-    csv_content = "ip,date,method,url,protocol,status,size,referrer,user_agent,request_time,upstream,request_host,response_time,upstream_status,request_id\n"
+    csv_content = "ip,date,method,url,protocol,status,size\n"
     for row in parsed_data:
-        csv_content += f"{row['ip']},{row['date']},{row['method']},{row['url']},{row['protocol']},{row['status']},{row['size']},{row['referrer']},{row['user_agent']},{row['request_time']},{row['upstream']},{row['request_host']},{row['response_time']},{row['upstream_status']},{row['request_id']}\n"
+        csv_content += f"{row['ip']},{row['date']},{row['method']},{row['url']},{row['protocol']},{row['status']},{row['size']}\n"
 
     github_url = f"https://api.github.com/repos/AaronShemtov/LogFileIntoCSV/contents/{file_path}"
     headers = {
@@ -114,21 +111,21 @@ def upload_to_github(parsed_data, log_file_name):
 
 def lambda_handler(event, context):
     print("Lambda function started.")
-    
+
     # Get log file name from query parameters (default to DEFAULT_LOG_FILE if not provided)
     log_file_name = event.get("queryStringParameters", {}).get("log_file", DEFAULT_LOG_FILE)
-    upload_option = event.get("queryStringParameters", {}).get("upload", "github")
-    
+    upload_option = event.get("queryStringParameters", {}).get("upload", "s3")
+
     try:
         log_data = fetch_logs(log_file_name)
         parsed_data = parse_logs(log_data)
-        
+
         if upload_option == "s3":
             result = upload_to_s3(parsed_data, log_file_name)  # Uploading to S3
             
         else:
             result = upload_to_github(parsed_data, log_file_name)  # Default uploading to GitHub
-        
+
         print("Lambda function completed successfully.")
         return {
             "statusCode": 200,
