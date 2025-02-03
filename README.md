@@ -1,3 +1,15 @@
+# System design
+
+The entire workflow begins in the LogFileIntoCSV/lambda folder of the GitHub repository, where the core code for processing logs resides. Sensitive information, such as credentials and configuration settings, is securely stored in GitHub Secrets, ensuring that your environment variables remain private throughout the deployment process.
+
+When changes are pushed to the main branch, the automated GitHub Actions flow is triggered. This initiates the creation of a Docker container, which packages your application along with all necessary dependencies. This container is then pushed to Amazon Elastic Container Registry (ECR), which acts as a secure storage repository for your container images.
+
+Once the Docker image is uploaded to Amazon ECR, it becomes the foundation for deploying an AWS Lambda function. The Lambda function is launched directly from the ECR image, which means the container’s environment is replicated in AWS, ensuring consistency in execution. To facilitate interaction with the outside world, the Lambda function is exposed through an API Gateway, which is linked to the Lambda function using a simple GET request method.
+
+When a request is made to this API Gateway endpoint, it triggers the Lambda function, which processes the Nginx log files. After processing, the resulting CSV file is uploaded to either Amazon S3 or GitHub, depending on the parameters specified in the request.
+
+Additionally, to ensure secure and authorized interactions with GitHub, the GITHUB_TOKEN—which is essential for accessing the repository—is securely stored in Lambda environment variables, maintaining smooth integration with GitHub during the file upload process.
+
 # LogFileIntoCSV Lambda
 
 This Lambda function fetches, processes, and uploads Nginx log files as CSV to either **GitHub** or **S3**. It includes features for filtering and sorting the log data.
@@ -105,18 +117,8 @@ Example of response: {"message": "File uploaded successfully", "url": "https://l
 Resulting file can be downloaded by pressink on the link:
 https://logs-result-csv.s3.amazonaws.com/logs-output/output_2025-02-03_18-02-40.csv
 
-# System design:
-The entire workflow begins in the LogFileIntoCSV/lambda folder of the GitHub repository, where the core code for processing logs resides. Sensitive information, such as credentials and configuration settings, is securely stored in GitHub Secrets, ensuring that your environment variables remain private throughout the deployment process.
 
-When changes are pushed to the main branch, the automated GitHub Actions flow is triggered. This initiates the creation of a Docker container, which packages your application along with all necessary dependencies. This container is then pushed to Amazon Elastic Container Registry (ECR), which acts as a secure storage repository for your container images.
-
-Once the Docker image is uploaded to Amazon ECR, it becomes the foundation for deploying an AWS Lambda function. The Lambda function is launched directly from the ECR image, which means the container’s environment is replicated in AWS, ensuring consistency in execution. To facilitate interaction with the outside world, the Lambda function is exposed through an API Gateway, which is linked to the Lambda function using a simple GET request method.
-
-When a request is made to this API Gateway endpoint, it triggers the Lambda function, which processes the Nginx log files. After processing, the resulting CSV file is uploaded to either Amazon S3 or GitHub, depending on the parameters specified in the request.
-
-Additionally, to ensure secure and authorized interactions with GitHub, the GITHUB_TOKEN—which is essential for accessing the repository—is securely stored in Lambda environment variables, maintaining smooth integration with GitHub during the file upload process.
-
-# Future Improvments
+# Possible Improvments
 
 For the moment not all of fields are supported. In order to do that requests with body should be implementes and app.py script should be enhanced accordingly so that it will be able to work with it.
 
