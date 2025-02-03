@@ -1,14 +1,10 @@
 # System design
 
-The entire workflow begins in the LogFileIntoCSV/lambda folder of the GitHub repository, where the core code for processing logs resides. Sensitive information, such as credentials and configuration settings, is securely stored in GitHub Secrets, ensuring that your environment variables remain private throughout the deployment process.
+The workflow starts in the LogFileIntoCSV/lambda folder, where the core log processing code resides. Sensitive credentials and configurations are securely stored in GitHub Secrets.
 
-When changes are pushed to the main branch, the automated GitHub Actions flow is triggered. This initiates the creation of a Docker container, which packages your application along with all necessary dependencies. This container is then pushed to Amazon Elastic Container Registry (ECR), which acts as a secure storage repository for your container images.
+When changes are pushed to the main branch, GitHub Actions triggers a workflow that builds a Docker container with the application and dependencies. This container is pushed to Amazon ECR and used to deploy an AWS Lambda function. The Lambda function is exposed via an Amazon API Gateway with a GET request endpoint https://32se2pmvb5.execute-api.eu-central-1.amazonaws.com.
 
-Once the Docker image is uploaded to Amazon ECR, it becomes the foundation for deploying an AWS Lambda function. The Lambda function is launched directly from the ECR image, which means the container’s environment is replicated in AWS, ensuring consistency in execution. To facilitate interaction with the outside world, the Lambda function is exposed through an API Gateway, which is linked to the Lambda function using a simple GET request method.
-
-When a request is made to this API Gateway endpoint, it triggers the Lambda function, which processes the Nginx log files. After processing, the resulting CSV file is uploaded to either Amazon S3 or GitHub, depending on the parameters specified in the request.
-
-Additionally, to ensure secure and authorized interactions with GitHub, the GITHUB_TOKEN—which is essential for accessing the repository—is securely stored in Lambda environment variables, maintaining smooth integration with GitHub during the file upload process.
+When triggered, the Amazon Lambda function processes Nginx log files and uploads the resulting CSV to either Amazon S3 or GitHub, based on request parameters. The GITHUB_TOKEN for repository access is securely stored in Lambda environment variables.
 
 # LogFileIntoCSV Lambda
 
