@@ -120,10 +120,11 @@ def lambda_handler(event, context):
         log_data = fetch_logs(log_file_name)
         parsed_data = parse_logs(log_data)
         
-        if upload_option == "github":
-            result = upload_to_github(parsed_data, log_file_name)  # Upload to GitHub
+        if upload_option == "s3":
+            result = upload_to_s3(parsed_data, log_file_name)  # Uploading to S3
+            
         else:
-            result = upload_to_s3(parsed_data, log_file_name)  # Default to uploading to S3
+            result = upload_to_github(parsed_data, log_file_name)  # Default uploading to GitHub
         
         print("Lambda function completed successfully.")
         return {
