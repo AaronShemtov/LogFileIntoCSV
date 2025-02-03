@@ -10,7 +10,7 @@ import os
 
 # Configure logging
 logging.basicConfig(
-    level=logging.INFO,  # Или DEBUG для более подробных логов
+    level=logging.DEBUG,  # Установлен уровень DEBUG для более подробных логов
     format='%(asctime)s - %(levelname)s - %(message)s'
 )
 
@@ -38,25 +38,30 @@ def fetch_logs(log_file_name):
     """Fetch log file from GitHub repository."""
     log_file_url = f"{RAW_GITHUB_URL}{log_file_name}"
     logging.debug(f"Fetching log file from URL: {log_file_url}")
+    print(f"Fetching log file from URL: {log_file_url}")  # Принудительный вывод в stdout
     
     try:
         response = requests.get(log_file_url)
         response.raise_for_status()
         logging.debug("Log file fetched successfully from GitHub.")
+        print("Log file fetched successfully from GitHub.")  # Принудительный вывод в stdout
         return response.text
     except requests.exceptions.RequestException as e:
         logging.error(f"Error fetching log file: {str(e)}")
+        print(f"Error fetching log file: {str(e)}")  # Принудительный вывод в stdout
         raise FileNotFoundError(f"Log file {log_file_name} not found in GitHub repository.")
 
 def parse_logs(log_data):
     """Parse logs using regex pattern."""
     logging.debug("Parsing log data using regex pattern.")
+    print("Parsing log data using regex pattern.")  # Принудительный вывод в stdout
     parsed_data = []
     for line in log_data.splitlines():
         match = LOG_PATTERN.match(line)
         if match:
             parsed_data.append(match.groupdict())
     logging.debug(f"Parsed {len(parsed_data)} lines of log data.")
+    print(f"Parsed {len(parsed_data)} lines of log data.")  # Принудительный вывод в stdout
     return parsed_data
 
 def upload_to_s3(parsed_data, log_file_name):
@@ -78,10 +83,12 @@ def upload_to_s3(parsed_data, log_file_name):
         file_url = f"https://{S3_BUCKET_NAME}.s3.amazonaws.com/{s3_key}"
 
         logging.info(f"File uploaded successfully to S3: {file_url}")
+        print(f"File uploaded successfully to S3: {file_url}")  # Принудительный вывод в stdout
         return {"message": "File uploaded successfully", "url": file_url}
 
     except Exception as e:
         logging.error(f"Error uploading file to S3: {str(e)}")
+        print(f"Error uploading file to S3: {str(e)}")  # Принудительный вывод в stdout
         return {"error": f"Failed to upload file: {str(e)}"}
 
 def upload_to_github(parsed_data, log_file_name):
@@ -111,14 +118,17 @@ def upload_to_github(parsed_data, log_file_name):
         response = requests.put(github_url, headers=headers, json=data)
         response.raise_for_status()
         logging.info(f"File uploaded successfully to GitHub: {github_url}")
+        print(f"File uploaded successfully to GitHub: {github_url}")  # Принудительный вывод в stdout
         return {"message": "File uploaded successfully", "url": github_url}
     except requests.exceptions.RequestException as e:
         logging.error(f"Failed to upload file to GitHub: {str(e)}")
+        print(f"Failed to upload file to GitHub: {str(e)}")  # Принудительный вывод в stdout
         return {"error": f"Failed to upload file: {str(e)}"}
 
 def lambda_handler(event, context):
     """AWS Lambda handler function."""
     logging.info("Lambda function started.")
+    print("Lambda function started.")  # Принудительный вывод в stdout
     
     # Get log file name from query parameters (default to DEFAULT_LOG_FILE if not provided)
     log_file_name = event.get("queryStringParameters", {}).get("log_file", DEFAULT_LOG_FILE)
@@ -134,12 +144,14 @@ def lambda_handler(event, context):
             result = upload_to_s3(parsed_data, log_file_name)  # Default to uploading to S3
         
         logging.info("Lambda function completed successfully.")
+        print("Lambda function completed successfully.")  # Принудительный вывод в stdout
         return {
             "statusCode": 200,
             "body": json.dumps(result)
         }
     except Exception as e:
         logging.error(f"Lambda function error: {str(e)}")
+        print(f"Lambda function error: {str(e)}")  # Принудительный вывод в stdout
         return {
             "statusCode": 500,
             "body": json.dumps({"error": str(e)}),
