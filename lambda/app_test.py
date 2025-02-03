@@ -22,17 +22,11 @@ s3 = boto3.client("s3")
 # Get GitHub token from environment variables
 GITHUB_TOKEN = os.environ.get("GITHUB_TOKEN")
 
-# Regular expression pattern to parse the log lines
+# Regular expression pattern for parsing Nginx logs
 log_pattern = re.compile(
     r'(?P<ip>\S+) - - \[(?P<datetime>[^\]]+)\] "(?P<method>[A-Z]+) (?P<request>.*?) (?P<protocol>HTTP/\d\.\d)" (?P<status>\d+) (?P<response_size>\d+) "(?P<referrer>.*?)" "(?P<user_agent>.*?)" (?P<request_duration>\d+) (?P<request_processing>\S+) \[(?P<service>[^\]]+)\] (?P<extra_info>\S+) (?P<upstream_ip>\S+) (?P<upstream_response_size>\d+) (?P<upstream_response_duration>\S+) (?P<final_response_code>\d+) (?P<request_id>\S+)'
 )
 
-# Function to parse each log line
-def parse_log_line(line):
-    match = log_pattern.match(line)
-    if match:
-        return match.groupdict()
-    return None
 
 def fetch_logs(log_file_name):
     """Fetch log file from GitHub repository."""
@@ -48,25 +42,33 @@ def fetch_logs(log_file_name):
         print(f"Error fetching log file: {str(e)}")
         raise FileNotFoundError(f"Log file {log_file_name} not found in GitHub repository.")
 
-def parse_logs(log_data):
-    """Parse logs using regex pattern and extract user-agent details."""
-    print("Parsing log data using regex pattern.")
-    parsed_data = []
-    for line in log_data.splitlines():
-        log_data_dict = parse_log_line(line)
-        if log_data_dict:
-            # Parse user-agent using the user-agent regex (optional)
-            user_agent = log_data_dict.get('user_agent', '')
-            ua_match = USER_AGENT_PATTERN.match(user_agent)
+# Function to parse each log line
+def parse_log_line(line):
+    match = log_pattern.match(line)
+    if match:
+        return match.groupdict()
+    return None
 
-            if ua_match:
-                ua_data = ua_match.groupdict()
-                log_data_dict.update(ua_data)
+# Open input log file and output CSV file
+with open(input_file, 'r', encoding='utf-8') as log_file, open(output_file, 'w', newline='', encoding='utf-8') as csv_file:
+    csv_writer = csv.DictWriter(csv_file, fieldnames=[
+        'ip', 'datetime', 'method', 'request', 'protocol', 'status', 'response_size',
+        'referrer', 'user_agent', 'request_duration', 'request_processing', 'service',
+        'extra_info', 'upstream_ip', 'upstream_response_size', 'upstream_response_duration',
+        'final_response_code', 'request_id'
+    ])
+    
+    # Write header row in CSV
+    csv_writer.writeheader()
 
-            parsed_data.append(log_data_dict)
-
-    print(f"Parsed {len(parsed_data)} lines of log data.")
-    return parsed_data
+    # Process each log line
+    for line in log_file:
+        log_data = parse_log_line(line)
+        if log_data:
+            # Format datetime to match the desired format
+            log_data['datetime'] = datetime.strptime(log_data['datetime'], '%d/%b/%Y:%H:%M:%S +0000').strftime('%d/%b/%Y:%H:%M:%S +0000')
+            # Write the log entry into CSV
+            csv_writer.writerow(log_data)
 
 def upload_to_s3(parsed_data, log_file_name):
     """Uploads parsed log data to an S3 bucket."""
