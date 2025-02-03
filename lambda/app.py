@@ -22,10 +22,17 @@ s3 = boto3.client("s3")
 # Get GitHub token from environment variables
 GITHUB_TOKEN = os.environ.get("GITHUB_TOKEN")
 
-# Regular expression pattern for parsing Nginx logs
-LOG_PATTERN = re.compile(
+# Regular expression pattern for parsing Nginx logs (new pattern)
+log_pattern = re.compile(
     r'(?P<ip>\S+) - - \[(?P<datetime>[^\]]+)\] "(?P<method>[A-Z]+) (?P<request>.*?) (?P<protocol>HTTP/\d\.\d)" (?P<status>\d+) (?P<response_size>\d+) "(?P<referrer>.*?)" "(?P<user_agent>.*?)" (?P<request_duration>\d+) (?P<request_processing>\S+) \[(?P<service>[^\]]+)\] (?P<extra_info>\S+) (?P<upstream_ip>\S+) (?P<upstream_response_size>\d+) (?P<upstream_response_duration>\S+) (?P<final_response_code>\d+) (?P<request_id>\S+)'
 )
+
+# Function to parse each log line using the new regex pattern
+def parse_log_line(line):
+    match = log_pattern.match(line)
+    if match:
+        return match.groupdict()
+    return None
 
 def fetch_logs(log_file_name):
     """Fetch log file from GitHub repository."""
@@ -42,13 +49,15 @@ def fetch_logs(log_file_name):
         raise FileNotFoundError(f"Log file {log_file_name} not found in GitHub repository.")
 
 def parse_logs(log_data):
-    """Parse logs using regex pattern."""
+    """Parse logs using the new regex pattern."""
     print("Parsing log data using regex pattern.")
     parsed_data = []
     for line in log_data.splitlines():
-        match = LOG_PATTERN.match(line)
-        if match:
-            parsed_data.append(match.groupdict())
+        log_data = parse_log_line(line)
+        if log_data:
+            # Format datetime to match the desired format
+            log_data['datetime'] = datetime.strptime(log_data['datetime'], '%d/%b/%Y:%H:%M:%S +0000').strftime('%d/%b/%Y:%H:%M:%S +0000')
+            parsed_data.append(log_data)
 
     print(f"Parsed {len(parsed_data)} lines of log data.")
     return parsed_data
