@@ -22,15 +22,15 @@ s3 = boto3.client("s3")
 # Get GitHub token from environment variables
 GITHUB_TOKEN = os.environ.get("GITHUB_TOKEN")
 
-# Regex pattern for parsing Nginx logs
+# Updated Regex pattern for parsing Nginx logs
 LOG_PATTERN = re.compile(
-    r'(?P<ip>[\d\.]+) - - \[(?P<date>.*?)\] "(?P<method>\w+) (?P<url>.*?) (?P<protocol>HTTP/\d\.\d)" (?P<status>\d+) (?P<size>\d+)'
+    r'(?P<ip>[\d\.]+) - - \[(?P<date>.*?)\] "(?P<method>\w+) (?P<url>.*?) (?P<protocol>HTTP/\d\.\d)" (?P<status>\d+) (?P<size>\d+) "[^"]*" "[^"]*" (?P<response_time>\d+\.\d+) \[[^\]]+\] \[] (?P<server>[\w\-\.]+) (?P<request_time>\d+\.\d+) (?P<response_code>\d+) (?P<request_id>\w+)$'
 )
 
 def fetch_logs(log_file_name):
     """Fetch log file from GitHub repository."""
     log_file_url = f"{RAW_GITHUB_URL}{log_file_name}"
-    print(f"Fetching log file from URL: {log_file_url}")  # Принудительный вывод в stdout
+    print(f"Fetching log file from URL: {log_file_url}")  # Forced output to stdout
 
     try:
         response = requests.get(log_file_url)
@@ -59,9 +59,9 @@ def upload_to_s3(parsed_data, log_file_name):
     s3_key = f"{S3_OUTPUT_FOLDER}{csv_filename}"  # Full S3 path
 
     # Convert parsed data to CSV format
-    csv_content = "ip,date,method,url,protocol,status,size\n"
+    csv_content = "ip,date,method,url,protocol,status,size,response_time,server,request_time,response_code,request_id\n"
     for row in parsed_data:
-        csv_content += f"{row['ip']},{row['date']},{row['method']},{row['url']},{row['protocol']},{row['status']},{row['size']}\n"
+        csv_content += f"{row['ip']},{row['date']},{row['method']},{row['url']},{row['protocol']},{row['status']},{row['size']},{row['response_time']},{row['server']},{row['request_time']},{row['response_code']},{row['request_id']}\n"
 
     try:
         # Upload to S3
@@ -84,9 +84,9 @@ def upload_to_github(parsed_data, log_file_name):
     file_path = f"logs_output/{csv_filename}"
 
     # Convert parsed data to CSV format
-    csv_content = "ip,date,method,url,protocol,status,size\n"
+    csv_content = "ip,date,method,url,protocol,status,size,response_time,server,request_time,response_code,request_id\n"
     for row in parsed_data:
-        csv_content += f"{row['ip']},{row['date']},{row['method']},{row['url']},{row['protocol']},{row['status']},{row['size']}\n"
+        csv_content += f"{row['ip']},{row['date']},{row['method']},{row['url']},{row['protocol']},{row['status']},{row['size']},{row['response_time']},{row['server']},{row['request_time']},{row['response_code']},{row['request_id']}\n"
 
     github_url = f"https://api.github.com/repos/AaronShemtov/LogFileIntoCSV/contents/{file_path}"
     headers = {
