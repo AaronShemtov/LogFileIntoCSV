@@ -17,6 +17,11 @@ The following request to call the Lambda function should be used:
 method: GET
 url: https://32se2pmvb5.execute-api.eu-central-1.amazonaws.com
 
+By default the 'nginx.log' log file is taken, converting it to CSV file and uploading it to 'LogFileIntoCSV/logs_output/' git repository with name 'output_[timestamp].csv'
+
+Response of request has the form:
+
+{"message": "File uploaded successfully", "url": "https://api.github.com/repos/AaronShemtov/LogFileIntoCSV/contents/logs_output/output_2025-02-03_17-46-50.csv"}
 
 ### Query Parameters
 
