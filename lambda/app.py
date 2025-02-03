@@ -127,6 +127,7 @@ def upload_to_github(parsed_data, log_file_name):
 
 def lambda_handler(event, context):
     """AWS Lambda handler function."""
+    logging.info("HOPA HOPA HOPA HOPA")
     logging.info("Lambda function started.")
     print("Lambda function started.")  # Принудительный вывод в stdout
     
