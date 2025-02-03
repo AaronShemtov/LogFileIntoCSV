@@ -124,7 +124,7 @@ def lambda_handler(event, context):
 
     # Get log file name from query parameters (default to DEFAULT_LOG_FILE if not provided)
     log_file_name = event.get("queryStringParameters", {}).get("log_file", DEFAULT_LOG_FILE)
-    upload_option = event.get("queryStringParameters", {}).get("upload", "s3")
+    upload_option = event.get("queryStringParameters", {}).get("upload", "github")
     
     # Get sort and filter parameters
     sort_param = event.get("queryStringParameters", {}).get("sort", None)
