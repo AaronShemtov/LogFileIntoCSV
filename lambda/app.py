@@ -1,18 +1,11 @@
 import re
 import csv
 import json
-import logging
 import requests
 import boto3
 import base64
 from datetime import datetime
 import os
-
-# Configure logging
-logging.basicConfig(
-    level=logging.DEBUG,  # Установлен уровень DEBUG для более подробных логов
-    format='%(asctime)s - %(levelname)s - %(message)s'
-)
 
 # Constants
 GITHUB_REPO = "AaronShemtov/LogFileIntoCSV"  # GitHub Repository
@@ -37,31 +30,26 @@ LOG_PATTERN = re.compile(
 def fetch_logs(log_file_name):
     """Fetch log file from GitHub repository."""
     log_file_url = f"{RAW_GITHUB_URL}{log_file_name}"
-    logging.debug(f"Fetching log file from URL: {log_file_url}")
     print(f"Fetching log file from URL: {log_file_url}")  # Принудительный вывод в stdout
     
     try:
         response = requests.get(log_file_url)
         response.raise_for_status()
-        logging.debug("Log file fetched successfully from GitHub.")
-        print("Log file fetched successfully from GitHub.")  # Принудительный вывод в stdout
+        print("Log file fetched successfully from GitHub.")
         return response.text
     except requests.exceptions.RequestException as e:
-        logging.error(f"Error fetching log file: {str(e)}")
-        print(f"Error fetching log file: {str(e)}")  # Принудительный вывод в stdout
+        print(f"Error fetching log file: {str(e)}")
         raise FileNotFoundError(f"Log file {log_file_name} not found in GitHub repository.")
 
 def parse_logs(log_data):
     """Parse logs using regex pattern."""
-    logging.debug("Parsing log data using regex pattern.")
-    print("Parsing log data using regex pattern.")  # Принудительный вывод в stdout
+    print("Parsing log data using regex pattern.")
     parsed_data = []
     for line in log_data.splitlines():
         match = LOG_PATTERN.match(line)
         if match:
             parsed_data.append(match.groupdict())
-    logging.debug(f"Parsed {len(parsed_data)} lines of log data.")
-    print(f"Parsed {len(parsed_data)} lines of log data.")  # Принудительный вывод в stdout
+    print(f"Parsed {len(parsed_data)} lines of log data.")
     return parsed_data
 
 def upload_to_s3(parsed_data, log_file_name):
@@ -82,13 +70,11 @@ def upload_to_s3(parsed_data, log_file_name):
         # Generate URL
         file_url = f"https://{S3_BUCKET_NAME}.s3.amazonaws.com/{s3_key}"
 
-        logging.info(f"File uploaded successfully to S3: {file_url}")
-        print(f"File uploaded successfully to S3: {file_url}")  # Принудительный вывод в stdout
+        print(f"File uploaded successfully to S3: {file_url}")
         return {"message": "File uploaded successfully", "url": file_url}
 
     except Exception as e:
-        logging.error(f"Error uploading file to S3: {str(e)}")
-        print(f"Error uploading file to S3: {str(e)}")  # Принудительный вывод в stdout
+        print(f"Error uploading file to S3: {str(e)}")
         return {"error": f"Failed to upload file: {str(e)}"}
 
 def upload_to_github(parsed_data, log_file_name):
@@ -111,25 +97,20 @@ def upload_to_github(parsed_data, log_file_name):
     data = {
         "message": f"Add log file {csv_filename}. File uploaded by Lambda",
         "content": base64.b64encode(csv_content.encode()).decode("utf-8"),
-        "branch": "main"  # Specify your branch
+        "branch": "main"
     }
 
     try:
         response = requests.put(github_url, headers=headers, json=data)
         response.raise_for_status()
-        logging.info(f"File uploaded successfully to GitHub: {github_url}")
-        print(f"File uploaded successfully to GitHub: {github_url}")  # Принудительный вывод в stdout
+        print(f"File uploaded successfully to GitHub: {github_url}")
         return {"message": "File uploaded successfully", "url": github_url}
     except requests.exceptions.RequestException as e:
-        logging.error(f"Failed to upload file to GitHub: {str(e)}")
-        print(f"Failed to upload file to GitHub: {str(e)}")  # Принудительный вывод в stdout
+        print(f"Failed to upload file to GitHub: {str(e)}")
         return {"error": f"Failed to upload file: {str(e)}"}
 
 def lambda_handler(event, context):
-    """AWS Lambda handler function."""
-    logging.info("HOPA HOPA HOPA HOPA")
-    logging.info("Lambda function started.")
-    print("Lambda function started.")  # Принудительный вывод в stdout
+    print("Lambda function started.")
     
     # Get log file name from query parameters (default to DEFAULT_LOG_FILE if not provided)
     log_file_name = event.get("queryStringParameters", {}).get("log_file", DEFAULT_LOG_FILE)
@@ -144,15 +125,13 @@ def lambda_handler(event, context):
         else:
             result = upload_to_s3(parsed_data, log_file_name)  # Default to uploading to S3
         
-        logging.info("Lambda function completed successfully.")
-        print("Lambda function completed successfully.")  # Принудительный вывод в stdout
+        print("Lambda function completed successfully.")
         return {
             "statusCode": 200,
             "body": json.dumps(result)
         }
     except Exception as e:
-        logging.error(f"Lambda function error: {str(e)}")
-        print(f"Lambda function error: {str(e)}")  # Принудительный вывод в stdout
+        print(f"Lambda function error: {str(e)}")
         return {
             "statusCode": 500,
             "body": json.dumps({"error": str(e)}),
