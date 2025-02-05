@@ -118,6 +118,27 @@ def upload_to_github(parsed_data, log_file_name):
         print(f"Failed to upload file to GitHub: {str(e)}")
         return {"error": f"Failed to upload file: {str(e)}"}
 
+def dynamodb_writing(log_file_name):
+    """Writing to DynamoDB."""
+
+    # Generate unique execution ID
+    execution_id = str(uuid.uuid4())
+    
+    # Store log in DynamoDB
+    dynamodb = boto3.resource('dynamodb')
+    table = dynamodb.Table('LambdaExecutionLogs')
+    
+    table.put_item(
+        Item={
+            'ExecutionID': execution_id,
+            'Record_Timestamp': datetime.utcnow().isoformat(),
+            'FileName': log_file_name
+        }
+    )
+
+
+
+
 def lambda_handler(event, context):
     print("Lambda function started.")
 
@@ -145,6 +166,11 @@ def lambda_handler(event, context):
             result = upload_to_s3(parsed_data, log_file_name)  # Uploading to S3
         else:
             result = upload_to_github(parsed_data, log_file_name)  # Default uploading to GitHub
+
+
+	# Generate unique execution ID
+    	execution_id = str(uuid.uuid4())
+	
 
         print("Lambda function completed successfully.")
         return {
