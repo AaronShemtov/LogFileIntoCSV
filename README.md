@@ -6,6 +6,8 @@ When changes are pushed to the main branch, GitHub Actions triggers a workflow t
 
 When triggered, the Amazon Lambda function processes Nginx log files and uploads the resulting CSV to either Amazon S3 or GitHub, based on request parameters. The GITHUB_TOKEN for repository access is securely stored in Lambda environment variables.
 
+<img src="/structure.svg" alt="Project Screenshot" width="500"/>
+
 # LogFileIntoCSV Lambda
 
 This Lambda function fetches, processes, and uploads Nginx log files as CSV to either **GitHub** or **S3**. It includes features for filtering and sorting the log data.
