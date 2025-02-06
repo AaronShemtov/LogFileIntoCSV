@@ -124,7 +124,7 @@ def upload_to_github(parsed_data, log_file_name):
         print(f"Failed to upload file to GitHub: {str(e)}")
         return {"error": f"Failed to upload file: {str(e)}"}
 
-def dynamodb_writing(log_file_name, upload_option, event_sender):
+def dynamodb_writing(log_file_name, upload_option, event_sender, filter_field, filter_value, order_field, order_value):
     """Writing to DynamoDB."""
 
     # Generate unique execution ID
@@ -141,7 +141,11 @@ def dynamodb_writing(log_file_name, upload_option, event_sender):
             'FileName': log_file_name,
             'Upload_Option': upload_option,
             'Upload_Option': upload_option,
-            'Event_sender' : event_sender
+            'Event_sender' : event_sender,
+            'Filter_field': filter_field,
+            'Filter_value':filter_value,
+            'Order_field':order_field,
+            'Order_value':order_value
         }
     )
 
@@ -166,7 +170,6 @@ def lambda_handler(event, context):
     order_value = event.get("queryStringParameters", {}).get("order_value", None)
     event_sender = event.get("queryStringParameters", {}).get("event_sender", "user_api")
 
-
     try:
         log_data = fetch_logs(log_file_name)
         parsed_data = parse_logs(log_data)
@@ -184,7 +187,7 @@ def lambda_handler(event, context):
         else:
             result = upload_to_github(parsed_data, log_file_name)  # Default uploading to GitHub
 
-        dynamodb_writing(log_file_name,upload_option,event_sender)
+        dynamodb_writing(log_file_name,upload_option,event_sender, filter_field, filter_value, order_field, order_value)
 
         print("Lambda function completed successfully.")
         return {
