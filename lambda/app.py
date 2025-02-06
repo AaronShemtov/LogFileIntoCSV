@@ -174,13 +174,13 @@ def lambda_handler(event, context):
 
         # Apply filtering if specified
         if filter_field and filter_value:
-            filter = filter_field + "+" + filter_value
+            filter = filter_field + "=" + filter_value
             parsed_data = filter_logs(parsed_data, filter_field, filter_value)
         else: filter = None
 
         # Apply sorting if specified
         if order_field and order_value:
-            order = order_field + order_value
+            order = order_field + "=" + order_value
             parsed_data = sort_logs(parsed_data, order_field, order_value)
         else: order = None
 
