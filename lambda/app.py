@@ -24,6 +24,10 @@ s3 = boto3.client("s3")
 # Get GitHub token from environment variables
 GITHUB_TOKEN = os.environ.get("GITHUB_TOKEN")
 
+# Dynamo DB
+dynamodb = boto3.resource("dynamodb")
+tabledb = dynamodb.Table("LambdaExecutionLogsLogFileIntoCSV")
+
 # Regular expression pattern for parsing Nginx logs
 LOG_PATTERN = re.compile(
     r'(?P<ip>\S+) - - \[(?P<datetime>[^\]]+)\] "(?P<method>[A-Z]+) (?P<request>.*?) (?P<protocol>HTTP/\d\.\d)" (?P<status>\d+) (?P<response_size>\d+) "(?P<referrer>.*?)" "(?P<user_agent>.*?)" (?P<request_duration>\d+) (?P<request_processing>\S+) \[(?P<service>[^\]]+)\] (?P<extra_info>\S+) (?P<upstream_ip>\S+) (?P<upstream_response_size>\d+) (?P<upstream_response_duration>\S+) (?P<final_response_code>\d+) (?P<request_id>\S+)'
@@ -145,6 +149,12 @@ def dynamodb_writing(log_file_name, upload_option):
 def lambda_handler(event, context):
     print("Lambda function started.")
 
+    # Get path from the event
+    path = event.get("rawPath", "/")
+
+    if path == "/info":
+        return get_execution_info()
+
     # Get log file name from query parameters (default to DEFAULT_LOG_FILE if not provided)
     log_file_name = event.get("queryStringParameters", {}).get("log_file", DEFAULT_LOG_FILE)
     upload_option = event.get("queryStringParameters", {}).get("upload", "github")
@@ -179,6 +189,23 @@ def lambda_handler(event, context):
         }
     except Exception as e:
         print(f"Lambda function error: {str(e)}")
+        return {
+            "statusCode": 500,
+            "body": json.dumps({"error": str(e)}),
+        }
+
+def get_execution_info():
+    """Retrieve stored execution logs from DynamoDB."""
+    
+    try:
+        response = tabledb.scan()  # Get all logs
+        logs = response.get("Items", [])
+        
+        return {
+            "statusCode": 200,
+            "body": json.dumps(logs, indent=2),
+        }
+    except Exception as e:
         return {
             "statusCode": 500,
             "body": json.dumps({"error": str(e)}),
