@@ -8,6 +8,12 @@ When triggered, the Amazon Lambda function processes Nginx log files and uploads
 
 <img src="/structure.svg" alt="Project Screenshot" width="500"/>
 
+Each run of lambda function is stored in DynamoDB.
+In addition each 12 hours crone EventBridge Scheduler is ran that triggers Lambda Function.
+
+All runs of Lambda function can be checked by request:
+GET https://32se2pmvb5.execute-api.eu-central-1.amazonaws.com/info
+
 # LogFileIntoCSV Lambda
 
 This Lambda function fetches, processes, and uploads Nginx log files as CSV to either **GitHub** or **S3**. It includes features for filtering and sorting the log data.
