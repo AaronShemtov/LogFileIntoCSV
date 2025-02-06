@@ -6,6 +6,8 @@ import boto3
 import base64
 from datetime import datetime
 import os
+import uuid
+
 
 # Constants
 GITHUB_REPO = "AaronShemtov/LogFileIntoCSV"  # GitHub Repository
@@ -118,7 +120,7 @@ def upload_to_github(parsed_data, log_file_name):
         print(f"Failed to upload file to GitHub: {str(e)}")
         return {"error": f"Failed to upload file: {str(e)}"}
 
-def dynamodb_writing(log_file_name):
+def dynamodb_writing(log_file_name, upload_option):
     """Writing to DynamoDB."""
 
     # Generate unique execution ID
@@ -132,7 +134,8 @@ def dynamodb_writing(log_file_name):
         Item={
             'ExecutionID': execution_id,
             'Record_Timestamp': datetime.utcnow().isoformat(),
-            'FileName': log_file_name
+            'FileName': log_file_name,
+            'Upload_Option': upload_option
         }
     )
 
@@ -167,10 +170,7 @@ def lambda_handler(event, context):
         else:
             result = upload_to_github(parsed_data, log_file_name)  # Default uploading to GitHub
 
-
-	# Generate unique execution ID
-    	execution_id = str(uuid.uuid4())
-	
+        dynamodb_writing(log_file_name,upload_option)
 
         print("Lambda function completed successfully.")
         return {
