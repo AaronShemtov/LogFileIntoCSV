@@ -124,7 +124,7 @@ def upload_to_github(parsed_data, log_file_name):
         print(f"Failed to upload file to GitHub: {str(e)}")
         return {"error": f"Failed to upload file: {str(e)}"}
 
-def dynamodb_writing(log_file_name, upload_option, event_sender, filter_field, filter_value, order_field, order_value):
+def dynamodb_writing(log_file_name, upload_option, event_sender, filter, order):
     """Writing to DynamoDB."""
 
     # Generate unique execution ID
@@ -142,10 +142,8 @@ def dynamodb_writing(log_file_name, upload_option, event_sender, filter_field, f
             'Upload_Option': upload_option,
             'Upload_Option': upload_option,
             'Event_sender' : event_sender,
-            'Filter_field': filter_field,
-            'Filter_value':filter_value,
-            'Order_field':order_field,
-            'Order_value':order_value
+            'Filter': filter,
+            'Order': order
         }
     )
 
@@ -176,10 +174,12 @@ def lambda_handler(event, context):
 
         # Apply filtering if specified
         if filter_field and filter_value:
+            filter = filter_field + "+" + filter_value
             parsed_data = filter_logs(parsed_data, filter_field, filter_value)
 
         # Apply sorting if specified
         if order_field and order_value:
+            order = order_field + order_value
             parsed_data = sort_logs(parsed_data, order_field, order_value)
 
         if upload_option == "s3":
@@ -187,7 +187,7 @@ def lambda_handler(event, context):
         else:
             result = upload_to_github(parsed_data, log_file_name)  # Default uploading to GitHub
 
-        dynamodb_writing(log_file_name,upload_option,event_sender, filter_field, filter_value, order_field, order_value)
+        dynamodb_writing(log_file_name,upload_option,event_sender,filter,order)
 
         print("Lambda function completed successfully.")
         return {
