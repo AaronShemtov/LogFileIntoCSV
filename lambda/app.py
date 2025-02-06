@@ -172,6 +172,8 @@ def lambda_handler(event, context):
         log_data = fetch_logs(log_file_name)
         parsed_data = parse_logs(log_data)
 
+        filter,order = None
+
         # Apply filtering if specified
         if filter_field and filter_value:
             filter = filter_field + "+" + filter_value
