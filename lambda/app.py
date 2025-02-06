@@ -125,7 +125,7 @@ def dynamodb_writing(log_file_name):
     execution_id = str(uuid.uuid4())
     
     # Store log in DynamoDB
-    dynamodb = boto3.resource('dynamodb')
+    dynamodb = boto3.resource('LambdaExecutionLogsLogFileIntoCSV')
     table = dynamodb.Table('LambdaExecutionLogs')
     
     table.put_item(
